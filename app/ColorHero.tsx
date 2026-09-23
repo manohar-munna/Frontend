@@ -52,12 +52,12 @@ export default function ColorHero() {
       return;
     }
     const timers = [
-      setTimeout(() => setWordFading(true), 3350),
-      setTimeout(() => setShowSeam(true), 3900),
-      setTimeout(() => setCurtainOpening(true), 4350),
-      setTimeout(() => setIntroDone(true), 5950),
-      setTimeout(() => setSceneReady(true), 6000),
-      setTimeout(() => setEntranceDone(true), 9000),
+      setTimeout(() => setWordFading(true), 4450),
+      setTimeout(() => setShowSeam(true), 5050),
+      setTimeout(() => setCurtainOpening(true), 5500),
+      setTimeout(() => setIntroDone(true), 7100),
+      setTimeout(() => setSceneReady(true), 7150),
+      setTimeout(() => setEntranceDone(true), 10150),
     ];
     return () => timers.forEach(clearTimeout);
   }, []);
@@ -184,8 +184,8 @@ export default function ColorHero() {
             })}
           </div>
 
-          <div className="hero-rock-side hero-rock-left" aria-hidden="true"><Image src="/assets/moss-rock-left.png" alt="" fill sizes="(max-width: 700px) 50vw, 35vw" /></div>
-          <div className="hero-rock-side hero-rock-right" aria-hidden="true"><Image src="/assets/moss-rock-right.png" alt="" fill sizes="(max-width: 700px) 50vw, 35vw" /></div>
+          <div className="hero-rock-side hero-rock-left" aria-hidden="true"><Image src="/assets/moss-rock-left.png" alt="" fill sizes="(max-width: 700px) 36vw, 24vw" /></div>
+          <div className="hero-rock-side hero-rock-right" aria-hidden="true"><Image src="/assets/moss-rock-right.png" alt="" fill sizes="(max-width: 700px) 36vw, 24vw" /></div>
           <div className="hero-rock" aria-hidden="true"><Image src="/assets/moss-rock.png" alt="" fill priority sizes="(max-width: 700px) 100vw, 85vw" /></div>
           <div className="color-product" aria-live="polite">
             {colors.map((color, index) => (
