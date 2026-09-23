@@ -14,10 +14,10 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Interactions
 
 - A burgundy curtain opens after the connected welcome lettering draws as one slow stroke and fades. A center seam appears, the curtains part, then the rock and main phone rise into view, followed by cards entering from both sides.
-- Five phone colors autoplay around a continuous arch with two distinct cards on each side. Each change crossfades the phone and sends a soft ripple from its center; cards can also be selected directly or paused.
+- Five phone colors autoplay around a continuous arch with two distinct cards on each side. Each change crossfades the phone and sends a soft ripple from its center; cards can also be selected directly.
 - The camera section changes composition as the page scrolls.
 - Finish controls show dedicated transparent phone renders for each color.
 - Navigation and layouts adapt to smaller screens.
 - Reduced-motion preferences are respected.
 
-The three original concept boards are in `design-concepts/`. The five phone renders and mossy rock in `public/assets/` are standalone transparent PNGs; the lettering, cards, arch, and stage are built in SVG/CSS.
+The three original concept boards are in `design-concepts/`. The five phone renders and three mossy rocks in `public/assets/` are standalone transparent PNGs; the lettering, cards, arch, and stage are built in SVG/CSS.
