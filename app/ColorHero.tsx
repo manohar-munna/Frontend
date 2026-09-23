@@ -13,8 +13,8 @@ const colors = [
 
 const COUNT = colors.length;
 const START = COUNT * 4;
-const WHEEL_DURATION = 5200;
-const WHEEL_SLOTS = COUNT * 6;
+const WHEEL_DURATION = 4000;
+const WHEEL_SLOTS = COUNT * 5;
 const WHEEL_STEP = Math.PI * 2 / WHEEL_SLOTS;
 
 const mix = (from: number, to: number, progress: number) => from + (to - from) * progress;
@@ -193,21 +193,21 @@ export default function ColorHero() {
           </div>
 
           <div className="color-rail" aria-label="Phone color carousel">
-            {mounted && Array.from({ length: entranceDone ? COUNT * 9 : WHEEL_SLOTS }, (_, index) => entranceDone ? index : START - WHEEL_SLOTS / 2 + index).map((virtualIndex) => {
+            {mounted && Array.from({ length: entranceDone ? COUNT * 9 : WHEEL_SLOTS }, (_, index) => entranceDone ? index : START - Math.floor(WHEEL_SLOTS / 2) + index).map((virtualIndex) => {
               const relative = virtualIndex - position;
               const distance = Math.abs(relative);
               const archX = relative * panelSize.width * 0.235;
               const archY = relative * relative * panelSize.height * 0.043;
               const archScale = Math.max(0.78, 1 - distance * 0.055);
               const lift = smoothstep(Math.min(wheelProgress / 0.32, 1));
-              const growth = smoothstep(Math.min(wheelProgress / 0.8, 1));
-              const spin = smoothstep(Math.max(0, Math.min((wheelProgress - 0.18) / 0.62, 1)));
+              const growth = smoothstep(Math.min(wheelProgress / 0.82, 1));
+              const spin = Math.max(0, Math.min((wheelProgress - 0.04) / 0.78, 1));
               const angle = relative * WHEEL_STEP + Math.PI * 4 * spin;
-              const radius = mix(Math.max(panelSize.width * 0.67, panelSize.height * 0.72), Math.max(panelSize.width * 1.12, panelSize.height * 0.9), growth);
+              const radius = mix(Math.max(panelSize.width * 0.62, panelSize.height * 0.72), Math.max(panelSize.width * 0.96, panelSize.height * 0.9), growth);
               const wheelX = Math.sin(angle) * radius;
               const wheelY = mix(panelSize.height * 0.85, panelSize.height * 0.28, lift) - panelSize.height * 0.28 + radius * (1 - Math.cos(angle));
-              const wheelScale = mix(0.18, 1, growth) * (0.86 + 0.14 * (1 + Math.cos(angle)) / 2);
-              const settle = smoothstep(Math.max(0, Math.min((wheelProgress - 0.8) / 0.2, 1)));
+              const wheelScale = mix(0.68, 1, growth) * (0.86 + 0.14 * (1 + Math.cos(angle)) / 2);
+              const settle = smoothstep(Math.max(0, Math.min((wheelProgress - 0.82) / 0.18, 1)));
               const x = mix(wheelX, archX, settle);
               const y = mix(wheelY, archY, settle);
               const scale = mix(wheelScale, archScale, settle);
