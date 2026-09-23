@@ -13,7 +13,7 @@ const colors = [
 
 const COUNT = colors.length;
 const START = COUNT * 4;
-const WHEEL_DURATION = 4000;
+const WHEEL_DURATION = 6400;
 const WHEEL_SLOTS = COUNT * 5;
 const WHEEL_STEP = Math.PI * 2 / WHEEL_SLOTS;
 
@@ -200,14 +200,18 @@ export default function ColorHero() {
               const archY = relative * relative * panelSize.height * 0.043;
               const archScale = Math.max(0.78, 1 - distance * 0.055);
               const lift = smoothstep(Math.min(wheelProgress / 0.32, 1));
-              const growth = smoothstep(Math.min(wheelProgress / 0.82, 1));
-              const spin = Math.max(0, Math.min((wheelProgress - 0.04) / 0.78, 1));
+              const turnProgress = Math.min(wheelProgress / 0.92, 1);
+              const growth = turnProgress;
+              const spinRamp = 0.18;
+              const spin = turnProgress < spinRamp
+                ? turnProgress * turnProgress / (2 * spinRamp * (1 - spinRamp / 2))
+                : (turnProgress - spinRamp / 2) / (1 - spinRamp / 2);
               const angle = relative * WHEEL_STEP + Math.PI * 4 * spin;
               const radius = mix(Math.max(panelSize.width * 0.62, panelSize.height * 0.72), Math.max(panelSize.width * 0.96, panelSize.height * 0.9), growth);
               const wheelX = Math.sin(angle) * radius;
               const wheelY = mix(panelSize.height * 0.85, panelSize.height * 0.28, lift) - panelSize.height * 0.28 + radius * (1 - Math.cos(angle));
-              const wheelScale = mix(0.68, 1, growth) * (0.86 + 0.14 * (1 + Math.cos(angle)) / 2);
-              const settle = smoothstep(Math.max(0, Math.min((wheelProgress - 0.82) / 0.18, 1)));
+              const wheelScale = mix(0.76, 1, growth) * (0.86 + 0.14 * (1 + Math.cos(angle)) / 2);
+              const settle = smoothstep(Math.max(0, Math.min((wheelProgress - 0.92) / 0.08, 1)));
               const x = mix(wheelX, archX, settle);
               const y = mix(wheelY, archY, settle);
               const scale = mix(wheelScale, archScale, settle);
