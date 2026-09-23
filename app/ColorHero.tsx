@@ -11,107 +11,117 @@ const colors = [
 ] as const;
 
 const COUNT = colors.length;
-const START = COUNT;
+const START = COUNT * 2;
+
+function WelcomeLettering() {
+  return (
+    <svg viewBox="0 0 550 155" role="img" aria-label="welcome" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
+      <path pathLength="1" d="M25 76 C22 112 31 129 46 108 L67 77 C61 106 70 129 84 110 L109 77" />
+      <path pathLength="1" d="M108 103 C130 91 148 72 152 86 C156 98 126 106 116 104 C122 130 153 125 170 101" />
+      <path pathLength="1" d="M169 101 C190 76 213 26 198 22 C176 15 175 100 184 116 C192 131 207 111 216 99" />
+      <path pathLength="1" d="M256 86 C236 69 215 87 219 108 C224 126 247 124 266 101" />
+      <path pathLength="1" d="M299 79 C278 74 269 113 284 121 C306 132 322 85 302 80 C311 97 326 104 339 94" />
+      <path pathLength="1" d="M338 94 C349 78 350 83 348 98 L346 119 C355 98 369 77 379 84 C388 92 371 117 378 121 C391 93 406 76 416 85 C425 96 405 118 416 122 C431 127 447 101 458 91" />
+      <path pathLength="1" d="M456 103 C477 90 495 72 499 86 C503 99 472 106 461 104 C468 130 503 126 525 98" />
+    </svg>
+  );
+}
 
 export default function ColorHero({ onExplore }: { onExplore: (section: string) => void }) {
-  const heroRef = useRef<HTMLElement>(null);
-  const trackIndexRef = useRef<number>(START);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const positionRef = useRef(START);
   const activeRef = useRef(0);
-  const wheelStepsRef = useRef(0);
-  const lastWheelRef = useRef(0);
+  const rippleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [active, setActive] = useState(0);
-  const [trackIndex, setTrackIndex] = useState<number>(START);
-  const [jumping, setJumping] = useState(false);
-  const [trackGeometry, setTrackGeometry] = useState({ width: 172, gap: 115 });
+  const [baseIndex, setBaseIndex] = useState(0);
+  const [ripple, setRipple] = useState<{ index: number; key: number } | null>(null);
+  const [position, setPosition] = useState(START);
+  const [resetting, setResetting] = useState(false);
+  const [panelSize, setPanelSize] = useState({ width: 1100, height: 700 });
   const [curtainOpening, setCurtainOpening] = useState(false);
   const [introDone, setIntroDone] = useState(false);
-  const introDoneRef = useRef(false);
+  const [sceneReady, setSceneReady] = useState(false);
+  const [entranceDone, setEntranceDone] = useState(false);
+  const [playing, setPlaying] = useState(true);
 
   useEffect(() => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduceMotion) {
-      introDoneRef.current = true;
       setIntroDone(true);
+      setSceneReady(true);
+      setEntranceDone(true);
+      setPlaying(false);
       return;
     }
-    const openTimer = setTimeout(() => setCurtainOpening(true), 1050);
-    const finishTimer = setTimeout(() => {
-      introDoneRef.current = true;
-      setIntroDone(true);
-    }, 2400);
-    return () => { clearTimeout(openTimer); clearTimeout(finishTimer); };
+    const timers = [
+      setTimeout(() => setCurtainOpening(true), 1050),
+      setTimeout(() => setSceneReady(true), 2150),
+      setTimeout(() => setIntroDone(true), 2450),
+      setTimeout(() => setEntranceDone(true), 4050),
+    ];
+    return () => timers.forEach(clearTimeout);
   }, []);
 
   useEffect(() => {
-    const measure = () => {
-      const card = heroRef.current?.querySelector<HTMLElement>(".color-card");
-      const track = heroRef.current?.querySelector<HTMLElement>(".color-track");
-      if (!card || !track) return;
-      setTrackGeometry({ width: card.getBoundingClientRect().width, gap: parseFloat(getComputedStyle(track).gap) || 0 });
-    };
+    const panel = panelRef.current;
+    if (!panel) return;
+    const measure = () => setPanelSize({ width: panel.clientWidth, height: panel.clientHeight });
     measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
+    const observer = new ResizeObserver(measure);
+    observer.observe(panel);
+    return () => observer.disconnect();
   }, []);
 
-  const move = useCallback((distance: number) => {
-    if (distance === 0) return;
-    const next = trackIndexRef.current + distance;
-    trackIndexRef.current = next;
-    const nextActive = ((next % COUNT) + COUNT) % COUNT;
+  useEffect(() => () => { if (rippleTimer.current) clearTimeout(rippleTimer.current); }, []);
+
+  const advance = useCallback((distance: number) => {
+    if (!distance) return;
+    const previous = activeRef.current;
+    const nextPosition = positionRef.current + distance;
+    const nextActive = ((nextPosition % COUNT) + COUNT) % COUNT;
+    positionRef.current = nextPosition;
     activeRef.current = nextActive;
-    setTrackIndex(next);
+    setPosition(nextPosition);
     setActive(nextActive);
+    if (rippleTimer.current) {
+      clearTimeout(rippleTimer.current);
+      setBaseIndex(previous);
+    }
+    setRipple({ index: nextActive, key: Date.now() });
+    rippleTimer.current = setTimeout(() => {
+      setBaseIndex(nextActive);
+      setRipple(null);
+      rippleTimer.current = null;
+    }, 1060);
   }, []);
 
   useEffect(() => {
-    const hero = heroRef.current;
-    if (!hero) return;
-    const onWheel = (event: WheelEvent) => {
-      const rect = hero.getBoundingClientRect();
-      if (rect.top < -30 || rect.bottom < window.innerHeight * .7) return;
-      if (!introDoneRef.current) { event.preventDefault(); return; }
-      if (Math.abs(event.deltaY) < 8) return;
-      const direction = event.deltaY > 0 ? 1 : -1;
-      if (direction > 0 && wheelStepsRef.current >= COUNT) return;
-      event.preventDefault();
-      const now = performance.now();
-      if (now - lastWheelRef.current < 850) return;
-      lastWheelRef.current = now;
-      wheelStepsRef.current = Math.max(0, wheelStepsRef.current + direction);
-      move(direction);
-    };
-    hero.addEventListener("wheel", onWheel, { passive: false });
-    return () => hero.removeEventListener("wheel", onWheel);
-  }, [move]);
+    if (!entranceDone || !playing) return;
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible" && panelRef.current && panelRef.current.getBoundingClientRect().bottom > 0) advance(1);
+    }, 3200);
+    return () => clearInterval(interval);
+  }, [advance, entranceDone, playing]);
 
-  const normalizeTrack = () => {
-    const current = trackIndexRef.current;
-    if (current < COUNT || current >= COUNT * 2) {
-      const normalized = ((current % COUNT) + COUNT) % COUNT + COUNT;
-      setJumping(true);
-      trackIndexRef.current = normalized;
-      setTrackIndex(normalized);
-      requestAnimationFrame(() => requestAnimationFrame(() => setJumping(false)));
+  const normalize = () => {
+    const current = positionRef.current;
+    if (current >= COUNT * 3 || current < COUNT * 2) {
+      const next = ((current % COUNT) + COUNT) % COUNT + START;
+      positionRef.current = next;
+      setResetting(true);
+      setPosition(next);
+      requestAnimationFrame(() => requestAnimationFrame(() => setResetting(false)));
     }
-  };
-
-  const selectColor = (index: number) => {
-    const current = activeRef.current;
-    let distance = index - current;
-    if (distance > COUNT / 2) distance -= COUNT;
-    if (distance < -COUNT / 2) distance += COUNT;
-    move(distance);
-    wheelStepsRef.current = Math.max(wheelStepsRef.current, index);
   };
 
   const theme = colors[active];
+  const base = colors[baseIndex];
   useEffect(() => {
     document.documentElement.style.setProperty("--header-ink", theme.ink);
   }, [theme.ink]);
   const themeStyle = {
-    "--hero-outer": theme.outer,
-    "--hero-stage": theme.stage,
+    "--hero-outer": base.outer,
+    "--hero-stage": base.stage,
     "--hero-glow": theme.glow,
     "--hero-ink": theme.ink,
   } as CSSProperties;
@@ -122,11 +132,13 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
         <div className={`opening-curtain ${curtainOpening ? "is-opening" : ""}`} aria-hidden="true">
           <div className="curtain-half curtain-left" />
           <div className="curtain-half curtain-right" />
-          <span className="curtain-word">welcome</span>
+          <span className="curtain-word"><WelcomeLettering /></span>
         </div>
       )}
-      <section ref={heroRef} id="top" className="reel-hero color-hero" style={themeStyle} aria-label="Explore iPhone 18 Pro colors">
-        <div className="reel-panel color-panel">
+      <section id="top" className={`reel-hero color-hero ${sceneReady ? "scene-ready" : ""} ${entranceDone ? "entrance-complete" : ""}`} style={themeStyle} aria-label="Explore iPhone 18 Pro colors">
+        {ripple && <div key={`outer-${ripple.key}`} className="hero-ripple hero-ripple-outer" style={{ backgroundColor: colors[ripple.index].outer }} />}
+        <div ref={panelRef} className="reel-panel color-panel">
+          {ripple && <div key={`stage-${ripple.key}`} className="hero-ripple hero-ripple-stage" style={{ backgroundColor: colors[ripple.index].stage }} />}
           <div className="color-glow" />
           <div className="reel-panel-top">
             <span className="reel-mark">iPhone 18 Pro</span>
@@ -135,26 +147,41 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
           </div>
 
           <div className="color-rail" aria-label="Phone color carousel">
-            <div className={`color-track ${jumping ? "no-transition" : ""}`} style={{ transform: `translate3d(${-((trackIndex * (trackGeometry.width + trackGeometry.gap)) + trackGeometry.width / 2)}px, -50%, 0)` }} onTransitionEnd={(event) => {
-              if (event.target === event.currentTarget && event.propertyName === "transform") normalizeTrack();
-            }}>
-              {[0, 1, 2].flatMap((copy) => colors.map((color, index) => (
+            {Array.from({ length: COUNT * 5 }, (_, virtualIndex) => {
+              const relative = virtualIndex - position;
+              const distance = Math.abs(relative);
+              const x = relative * panelSize.width * 0.235;
+              const y = relative * relative * panelSize.height * 0.043;
+              const entryX = sceneReady ? 0 : relative < 0 ? -panelSize.width : panelSize.width;
+              const color = colors[virtualIndex % COUNT];
+              const style = {
+                transform: `translate3d(calc(-50% + ${x + entryX}px), ${y}px, 0) rotate(${relative * 9}deg) scale(${Math.max(0.78, 1 - distance * 0.055)})`,
+                opacity: distance > 3.45 ? 0 : sceneReady ? 1 : 0,
+                pointerEvents: distance <= 2.7 && sceneReady ? "auto" : "none",
+                transitionDelay: sceneReady && !entranceDone ? `${0.65 + Math.min(distance, 3) * 0.09}s` : "0s",
+              } as CSSProperties;
+              return (
                 <button
                   type="button"
-                  key={`${copy}-${color.name}`}
-                  className="color-card"
-                  onClick={() => selectColor(index)}
+                  key={virtualIndex}
+                  className={`color-card ${resetting ? "no-transition" : ""}`}
+                  style={style}
+                  onClick={() => advance(relative)}
+                  onTransitionEnd={(event) => {
+                    if (event.target === event.currentTarget && event.propertyName === "transform") normalize();
+                  }}
                   aria-label={`Show ${color.name} iPhone`}
-                  aria-hidden={copy !== 1}
-                  tabIndex={copy === 1 ? 0 : -1}
+                  aria-hidden={distance > 2.7}
+                  tabIndex={distance > 2.7 ? -1 : 0}
                 >
-                  <Image src={color.image} alt="" fill sizes="(max-width: 700px) 130px, 180px" />
+                  <Image src={color.image} alt="" fill loading="eager" sizes="(max-width: 700px) 110px, 180px" />
                   <span>{color.name}</span>
                 </button>
-              )))}
-            </div>
+              );
+            })}
           </div>
 
+          <div className="hero-rock" aria-hidden="true"><Image src="/assets/moss-rock.png" alt="" fill priority sizes="(max-width: 700px) 100vw, 85vw" /></div>
           <div className="color-product" aria-live="polite">
             {colors.map((color, index) => (
               <Image
@@ -171,10 +198,11 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
           <div className="color-product-caption" key={theme.name}>{theme.name}</div>
           <button className="color-explore" onClick={() => onExplore("finishes")}>Explore finishes <span>↗</span></button>
           <div className="color-heading"><span>iPhone 18 Pro</span><h1>Choose your perspective.</h1></div>
-          <div className="color-hint"><span>SCROLL TO CHANGE COLOR</span><span>↓</span></div>
+          <div className="color-hint"><button type="button" onClick={() => setPlaying((value) => !value)} aria-label={playing ? "Pause color animation" : "Play color animation"}>{playing ? "Ⅱ" : "▶"}</button><span>{playing ? "COLORS IN MOTION" : "MOTION PAUSED"}</span></div>
         </div>
         <div className="color-footer"><span>THE NEW PRO, IN COLOR</span><span>AN INDEPENDENT CONCEPT</span></div>
       </section>
     </>
   );
 }
+
