@@ -13,6 +13,10 @@ const colors = [
 
 const COUNT = colors.length;
 const START = COUNT * 2;
+const WHEEL_DURATION = 5200;
+
+const mix = (from: number, to: number, progress: number) => from + (to - from) * progress;
+const smoothstep = (progress: number) => progress * progress * (3 - 2 * progress);
 
 function WelcomeLettering() {
   return (
@@ -27,6 +31,7 @@ export default function ColorHero() {
   const positionRef = useRef(START);
   const activeRef = useRef(0);
   const rippleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [active, setActive] = useState(0);
   const [outgoing, setOutgoing] = useState<number | null>(null);
   const [baseIndex, setBaseIndex] = useState(0);
@@ -39,14 +44,18 @@ export default function ColorHero() {
   const [curtainOpening, setCurtainOpening] = useState(false);
   const [introDone, setIntroDone] = useState(false);
   const [sceneReady, setSceneReady] = useState(false);
+  const [wheelStarted, setWheelStarted] = useState(false);
+  const [wheelProgress, setWheelProgress] = useState(0);
   const [entranceDone, setEntranceDone] = useState(false);
   const [autoPlay, setAutoPlay] = useState(true);
+  const [autoplayEpoch, setAutoplayEpoch] = useState(0);
 
   useEffect(() => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduceMotion) {
       setIntroDone(true);
       setSceneReady(true);
+      setWheelProgress(1);
       setEntranceDone(true);
       setAutoPlay(false);
       return;
@@ -57,10 +66,25 @@ export default function ColorHero() {
       setTimeout(() => setCurtainOpening(true), 5500),
       setTimeout(() => setIntroDone(true), 7100),
       setTimeout(() => setSceneReady(true), 7150),
-      setTimeout(() => setEntranceDone(true), 10150),
+      setTimeout(() => setWheelStarted(true), 10150),
     ];
     return () => timers.forEach(clearTimeout);
   }, []);
+
+  useEffect(() => {
+    if (!wheelStarted) return;
+    let frame = 0;
+    let startedAt: number | null = null;
+    const animate = (now: number) => {
+      if (startedAt === null) startedAt = now;
+      const progress = Math.min((now - startedAt) / WHEEL_DURATION, 1);
+      setWheelProgress(progress);
+      if (progress < 1) frame = requestAnimationFrame(animate);
+      else setEntranceDone(true);
+    };
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [wheelStarted]);
 
   useEffect(() => {
     const panel = panelRef.current;
@@ -72,7 +96,10 @@ export default function ColorHero() {
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => () => { if (rippleTimer.current) clearTimeout(rippleTimer.current); }, []);
+  useEffect(() => () => {
+    if (rippleTimer.current) clearTimeout(rippleTimer.current);
+    if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+  }, []);
 
   const advance = useCallback((distance: number) => {
     if (!distance) return;
@@ -99,11 +126,23 @@ export default function ColorHero() {
 
   useEffect(() => {
     if (!entranceDone || !autoPlay) return;
-    const interval = setInterval(() => {
+    const tick = () => {
       if (document.visibilityState === "visible" && panelRef.current && panelRef.current.getBoundingClientRect().bottom > 0) advance(1);
-    }, 3200);
-    return () => clearInterval(interval);
-  }, [advance, entranceDone, autoPlay]);
+      autoAdvanceTimer.current = setTimeout(tick, 3200);
+    };
+    autoAdvanceTimer.current = setTimeout(tick, 3200);
+    return () => {
+      if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+      autoAdvanceTimer.current = null;
+    };
+  }, [advance, entranceDone, autoPlay, autoplayEpoch]);
+
+  const selectCard = (distance: number) => {
+    if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+    autoAdvanceTimer.current = null;
+    setAutoplayEpoch((epoch) => epoch + 1);
+    advance(distance);
+  };
 
   const normalize = () => {
     const current = positionRef.current;
@@ -153,23 +192,36 @@ export default function ColorHero() {
             {Array.from({ length: COUNT * 5 }, (_, virtualIndex) => {
               const relative = virtualIndex - position;
               const distance = Math.abs(relative);
-              const x = relative * panelSize.width * 0.235;
-              const y = relative * relative * panelSize.height * 0.043;
-              const entryX = sceneReady ? 0 : relative < 0 ? -panelSize.width : panelSize.width;
+              if (!entranceDone && distance > 2) return null;
+              const archX = relative * panelSize.width * 0.235;
+              const archY = relative * relative * panelSize.height * 0.043;
+              const archScale = Math.max(0.78, 1 - distance * 0.055);
+              const wheelPhase = Math.min(wheelProgress / 0.78, 1);
+              const emerge = smoothstep(Math.min(wheelProgress / 0.36, 1));
+              const growth = Math.pow(wheelPhase, 0.7);
+              const spin = smoothstep(Math.max(0, Math.min((wheelProgress - 0.2) / 0.58, 1)));
+              const angle = -Math.PI / 2 + relative * (Math.PI * 2 / COUNT) + Math.PI * 4 * spin;
+              const wheelX = Math.cos(angle) * panelSize.width * mix(0.02, 0.3, emerge);
+              const wheelY = panelSize.height * mix(0.64, 0.14, emerge) + Math.sin(angle) * panelSize.height * mix(0.02, 0.3, emerge);
+              const wheelScale = mix(0.17, 0.98, growth) * (0.82 + 0.18 * (1 - Math.sin(angle)) / 2);
+              const settle = smoothstep(Math.max(0, Math.min((wheelProgress - 0.78) / 0.22, 1)));
+              const x = mix(wheelX, archX, settle);
+              const y = mix(wheelY, archY, settle);
+              const scale = mix(wheelScale, archScale, settle);
+              const rotation = mix(Math.cos(angle) * 14, relative * 9, settle);
               const color = colors[virtualIndex % COUNT];
               const style = {
-                transform: `translate3d(calc(-50% + ${x + entryX}px), ${y}px, 0) rotate(${relative * 9}deg) scale(${Math.max(0.78, 1 - distance * 0.055)})`,
-                opacity: distance > 3.45 ? 0 : sceneReady ? 1 : 0,
-                pointerEvents: distance <= 2.7 && sceneReady ? "auto" : "none",
-                transitionDelay: sceneReady && !entranceDone ? `${1.2 + Math.min(distance, 3) * 0.1}s` : "0s",
+                transform: `translate3d(calc(-50% + ${x}px), ${y}px, 0) rotate(${rotation}deg) scale(${scale})`,
+                opacity: entranceDone ? distance > 3.45 ? 0 : 1 : wheelStarted ? Math.min(1, wheelProgress * 5) : 0,
+                pointerEvents: entranceDone && distance <= 2.7 ? "auto" : "none",
               } as CSSProperties;
               return (
                 <button
                   type="button"
                   key={virtualIndex}
-                  className={`color-card ${resetting ? "no-transition" : ""}`}
+                  className={`color-card ${resetting || !entranceDone ? "no-transition" : ""}`}
                   style={style}
-                  onClick={() => advance(relative)}
+                  onClick={() => selectCard(relative)}
                   onTransitionEnd={(event) => {
                     if (event.target === event.currentTarget && event.propertyName === "transform") normalize();
                   }}
@@ -184,8 +236,6 @@ export default function ColorHero() {
             })}
           </div>
 
-          <div className="hero-rock-side hero-rock-left" aria-hidden="true"><Image src="/assets/moss-rock-left.png" alt="" fill sizes="(max-width: 700px) 36vw, 24vw" /></div>
-          <div className="hero-rock-side hero-rock-right" aria-hidden="true"><Image src="/assets/moss-rock-right.png" alt="" fill sizes="(max-width: 700px) 36vw, 24vw" /></div>
           <div className="hero-rock" aria-hidden="true"><Image src="/assets/moss-rock.png" alt="" fill priority sizes="(max-width: 700px) 100vw, 85vw" /></div>
           <div className="color-product" aria-live="polite">
             {colors.map((color, index) => (
