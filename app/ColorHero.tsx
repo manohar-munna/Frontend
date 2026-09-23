@@ -12,8 +12,10 @@ const colors = [
 ] as const;
 
 const COUNT = colors.length;
-const START = COUNT * 2;
+const START = COUNT * 4;
 const WHEEL_DURATION = 5200;
+const WHEEL_SLOTS = COUNT * 6;
+const WHEEL_STEP = Math.PI * 2 / WHEEL_SLOTS;
 
 const mix = (from: number, to: number, progress: number) => from + (to - from) * progress;
 const smoothstep = (progress: number) => progress * progress * (3 - 2 * progress);
@@ -38,6 +40,7 @@ export default function ColorHero() {
   const [ripple, setRipple] = useState<{ index: number; key: number } | null>(null);
   const [position, setPosition] = useState(START);
   const [resetting, setResetting] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [panelSize, setPanelSize] = useState({ width: 1100, height: 700 });
   const [wordFading, setWordFading] = useState(false);
   const [showSeam, setShowSeam] = useState(false);
@@ -51,6 +54,7 @@ export default function ColorHero() {
   const [autoplayEpoch, setAutoplayEpoch] = useState(0);
 
   useEffect(() => {
+    setMounted(true);
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduceMotion) {
       setIntroDone(true);
@@ -146,7 +150,7 @@ export default function ColorHero() {
 
   const normalize = () => {
     const current = positionRef.current;
-    if (current >= COUNT * 3 || current < COUNT * 2) {
+    if (current >= START + COUNT || current < START) {
       const next = ((current % COUNT) + COUNT) % COUNT + START;
       positionRef.current = next;
       setResetting(true);
@@ -189,30 +193,30 @@ export default function ColorHero() {
           </div>
 
           <div className="color-rail" aria-label="Phone color carousel">
-            {Array.from({ length: COUNT * 5 }, (_, virtualIndex) => {
+            {mounted && Array.from({ length: entranceDone ? COUNT * 9 : WHEEL_SLOTS }, (_, index) => entranceDone ? index : START - WHEEL_SLOTS / 2 + index).map((virtualIndex) => {
               const relative = virtualIndex - position;
               const distance = Math.abs(relative);
-              if (!entranceDone && distance > 2) return null;
               const archX = relative * panelSize.width * 0.235;
               const archY = relative * relative * panelSize.height * 0.043;
               const archScale = Math.max(0.78, 1 - distance * 0.055);
-              const wheelPhase = Math.min(wheelProgress / 0.78, 1);
-              const emerge = smoothstep(Math.min(wheelProgress / 0.36, 1));
-              const growth = Math.pow(wheelPhase, 0.7);
-              const spin = smoothstep(Math.max(0, Math.min((wheelProgress - 0.2) / 0.58, 1)));
-              const angle = -Math.PI / 2 + relative * (Math.PI * 2 / COUNT) + Math.PI * 4 * spin;
-              const wheelX = Math.cos(angle) * panelSize.width * mix(0.02, 0.3, emerge);
-              const wheelY = panelSize.height * mix(0.64, 0.14, emerge) + Math.sin(angle) * panelSize.height * mix(0.02, 0.3, emerge);
-              const wheelScale = mix(0.17, 0.98, growth) * (0.82 + 0.18 * (1 - Math.sin(angle)) / 2);
-              const settle = smoothstep(Math.max(0, Math.min((wheelProgress - 0.78) / 0.22, 1)));
+              const lift = smoothstep(Math.min(wheelProgress / 0.32, 1));
+              const growth = smoothstep(Math.min(wheelProgress / 0.8, 1));
+              const spin = smoothstep(Math.max(0, Math.min((wheelProgress - 0.18) / 0.62, 1)));
+              const angle = relative * WHEEL_STEP + Math.PI * 4 * spin;
+              const radius = mix(Math.max(panelSize.width * 0.67, panelSize.height * 0.72), Math.max(panelSize.width * 1.12, panelSize.height * 0.9), growth);
+              const wheelX = Math.sin(angle) * radius;
+              const wheelY = mix(panelSize.height * 0.85, panelSize.height * 0.28, lift) - panelSize.height * 0.28 + radius * (1 - Math.cos(angle));
+              const wheelScale = mix(0.18, 1, growth) * (0.86 + 0.14 * (1 + Math.cos(angle)) / 2);
+              const settle = smoothstep(Math.max(0, Math.min((wheelProgress - 0.8) / 0.2, 1)));
               const x = mix(wheelX, archX, settle);
               const y = mix(wheelY, archY, settle);
               const scale = mix(wheelScale, archScale, settle);
-              const rotation = mix(Math.cos(angle) * 14, relative * 9, settle);
+              const rotation = mix(Math.sin(angle) * 36, relative * 9, settle);
               const color = colors[virtualIndex % COUNT];
+              const xOffset = `${x < 0 ? "-" : "+"} ${Number(Math.abs(x).toFixed(3))}px`;
               const style = {
-                transform: `translate3d(calc(-50% + ${x}px), ${y}px, 0) rotate(${rotation}deg) scale(${scale})`,
-                opacity: entranceDone ? distance > 3.45 ? 0 : 1 : wheelStarted ? Math.min(1, wheelProgress * 5) : 0,
+                transform: `translate3d(calc(-50% ${xOffset}), ${Number(y.toFixed(3))}px, 0px) rotate(${Number(rotation.toFixed(3))}deg) scale(${Number(scale.toFixed(4))})`,
+                opacity: entranceDone ? distance > 2.5 ? 0 : 1 : wheelStarted ? Math.min(1, wheelProgress * 5) * (distance > 2 ? 1 - settle : 1) : 0,
                 pointerEvents: entranceDone && distance <= 2.7 ? "auto" : "none",
               } as CSSProperties;
               return (
@@ -226,8 +230,8 @@ export default function ColorHero() {
                     if (event.target === event.currentTarget && event.propertyName === "transform") normalize();
                   }}
                   aria-label={`Show ${color.name} iPhone`}
-                  aria-hidden={distance > 2.7}
-                  tabIndex={distance > 2.7 ? -1 : 0}
+                  aria-hidden={!entranceDone || distance > 2.7}
+                  tabIndex={!entranceDone || distance > 2.7 ? -1 : 0}
                 >
                   <Image src={color.image} alt="" fill loading="eager" sizes="(max-width: 700px) 110px, 180px" />
                   <span>{color.name}</span>
