@@ -13,7 +13,7 @@ const colors = [
 
 const COUNT = colors.length;
 const START = COUNT * 4;
-const WHEEL_DURATION = 4200;
+const WHEEL_DURATION = 3700;
 const ENTRANCE_TRAVEL = 2;
 
 const mix = (from: number, to: number, progress: number) => from + (to - from) * progress;
