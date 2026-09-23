@@ -17,13 +17,7 @@ const START = COUNT * 2;
 function WelcomeLettering() {
   return (
     <svg viewBox="0 0 550 155" role="img" aria-label="welcome" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
-      <path pathLength="1" d="M25 76 C22 112 31 129 46 108 L67 77 C61 106 70 129 84 110 L109 77" />
-      <path pathLength="1" d="M108 103 C130 91 148 72 152 86 C156 98 126 106 116 104 C122 130 153 125 170 101" />
-      <path pathLength="1" d="M169 101 C190 76 213 26 198 22 C176 15 175 100 184 116 C192 131 207 111 216 99" />
-      <path pathLength="1" d="M256 86 C236 69 215 87 219 108 C224 126 247 124 266 101" />
-      <path pathLength="1" d="M299 79 C278 74 269 113 284 121 C306 132 322 85 302 80 C311 97 326 104 339 94" />
-      <path pathLength="1" d="M338 94 C349 78 350 83 348 98 L346 119 C355 98 369 77 379 84 C388 92 371 117 378 121 C391 93 406 76 416 85 C425 96 405 118 416 122 C431 127 447 101 458 91" />
-      <path pathLength="1" d="M456 103 C477 90 495 72 499 86 C503 99 472 106 461 104 C468 130 503 126 525 98" />
+      <path pathLength="1" d="M25 76 C22 112 31 129 46 108 L67 77 C61 106 70 129 84 110 L109 77 C112 87 111 97 108 103 C130 91 148 72 152 86 C156 98 126 106 116 104 C122 130 153 125 170 101 C190 76 213 26 198 22 C176 15 175 100 184 116 C192 131 207 111 216 99 C225 84 241 77 253 84 C258 87 252 91 247 88 C235 81 220 91 220 106 C220 121 245 125 266 101 C276 83 291 76 299 79 C278 74 269 113 284 121 C306 132 322 85 302 80 C311 97 326 104 339 94 C349 78 350 83 348 98 L346 119 C355 98 369 77 379 84 C388 92 371 117 378 121 C391 93 406 76 416 85 C425 96 405 118 416 122 C431 127 447 101 458 91 C460 98 460 101 456 103 C477 90 495 72 499 86 C503 99 472 106 461 104 C468 130 503 126 525 98" />
     </svg>
   );
 }
@@ -40,6 +34,8 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
   const [position, setPosition] = useState(START);
   const [resetting, setResetting] = useState(false);
   const [panelSize, setPanelSize] = useState({ width: 1100, height: 700 });
+  const [wordFading, setWordFading] = useState(false);
+  const [showSeam, setShowSeam] = useState(false);
   const [curtainOpening, setCurtainOpening] = useState(false);
   const [introDone, setIntroDone] = useState(false);
   const [sceneReady, setSceneReady] = useState(false);
@@ -56,10 +52,12 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
       return;
     }
     const timers = [
-      setTimeout(() => setCurtainOpening(true), 2150),
-      setTimeout(() => setSceneReady(true), 3250),
-      setTimeout(() => setIntroDone(true), 3500),
-      setTimeout(() => setEntranceDone(true), 5050),
+      setTimeout(() => setWordFading(true), 3350),
+      setTimeout(() => setShowSeam(true), 3900),
+      setTimeout(() => setCurtainOpening(true), 4350),
+      setTimeout(() => setIntroDone(true), 5950),
+      setTimeout(() => setSceneReady(true), 6000),
+      setTimeout(() => setEntranceDone(true), 9000),
     ];
     return () => timers.forEach(clearTimeout);
   }, []);
@@ -135,9 +133,10 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
   return (
     <>
       {!introDone && (
-        <div className={`opening-curtain ${curtainOpening ? "is-opening" : ""}`} aria-hidden="true">
+        <div className={`opening-curtain ${wordFading ? "is-word-fading" : ""} ${showSeam ? "has-seam" : ""} ${curtainOpening ? "is-opening" : ""}`} aria-hidden="true">
           <div className="curtain-half curtain-left" />
           <div className="curtain-half curtain-right" />
+          <span className="curtain-seam" />
           <span className="curtain-word"><WelcomeLettering /></span>
         </div>
       )}
@@ -164,7 +163,7 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
                 transform: `translate3d(calc(-50% + ${x + entryX}px), ${y}px, 0) rotate(${relative * 9}deg) scale(${Math.max(0.78, 1 - distance * 0.055)})`,
                 opacity: distance > 3.45 ? 0 : sceneReady ? 1 : 0,
                 pointerEvents: distance <= 2.7 && sceneReady ? "auto" : "none",
-                transitionDelay: sceneReady && !entranceDone ? `${0.65 + Math.min(distance, 3) * 0.09}s` : "0s",
+                transitionDelay: sceneReady && !entranceDone ? `${1.2 + Math.min(distance, 3) * 0.1}s` : "0s",
               } as CSSProperties;
               return (
                 <button
@@ -201,8 +200,8 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
               />
             ))}
           </div>
-          <div className="color-product-caption" key={theme.name}>{theme.name}</div>
-          <button className="color-explore" onClick={() => onExplore("finishes")}>Explore finishes <span>↗</span></button>
+          {entranceDone && <div className="color-product-caption" key={theme.name}>{theme.name}</div>}
+          {entranceDone && <button className="color-explore" onClick={() => onExplore("finishes")}>Explore finishes <span>↗</span></button>}
           <div className="color-heading"><span>iPhone 18 Pro</span><h1>Choose your perspective.</h1></div>
           <div className="color-hint"><button type="button" onClick={() => setPlaying((value) => !value)} aria-label={playing ? "Pause color animation" : "Play color animation"}>{playing ? "Ⅱ" : "▶"}</button><span>{playing ? "COLORS IN MOTION" : "MOTION PAUSED"}</span></div>
         </div>
