@@ -2,15 +2,15 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import HeroExperience from "./HeroExperience";
+import ColorHero from "./ColorHero";
 
-type Finish = "graphite" | "pearl" | "sage" | "stone";
+type Finish = "burgundy" | "pearl" | "graphite" | "sage";
 
 const finishes: { id: Finish; name: string; color: string }[] = [
+  { id: "burgundy", name: "Burgundy", color: "#64263c" },
+  { id: "pearl", name: "Pearl", color: "#e5e0d9" },
   { id: "graphite", name: "Graphite", color: "#41443f" },
-  { id: "pearl", name: "Pearl", color: "#e5e4de" },
-  { id: "sage", name: "Sage", color: "#899081" },
-  { id: "stone", name: "Stone", color: "#b7b1a6" },
+  { id: "sage", name: "Sage", color: "#77877b" },
 ];
 
 function Arrow({ diagonal = false }: { diagonal?: boolean }) {
@@ -40,7 +40,7 @@ function scrollToSection(id: string) {
 }
 
 export default function Home() {
-  const [finish, setFinish] = useState<Finish>("graphite");
+  const [finish, setFinish] = useState<Finish>("burgundy");
   const [cameraStep, setCameraStep] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const cameraStepsRef = useRef<(HTMLDivElement | null)[]>([]);
@@ -68,7 +68,7 @@ export default function Home() {
         <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen}><span /><span /></button>
       </header>
 
-      <HeroExperience onExplore={scrollToSection} />
+      <ColorHero onExplore={scrollToSection} />
 
       <section id="overview" className="overview-section section-shell">
         <div className="section-index"><span>01 / 04</span><span>OVERVIEW</span></div>
@@ -108,7 +108,7 @@ export default function Home() {
 
       <section id="finishes" className={`finishes-section finish-${finish} section-shell`}>
         <div className="section-index"><span>04 / 04</span><span>FINISHES</span></div>
-        <div className="finishes-content"><Reveal className="finishes-copy"><p className="eyebrow">Make it yours</p><h2>Find your<br /><em>finish.</em></h2><p>Four considered tones. One unmistakable presence.</p><div className="finish-picker" role="group" aria-label="Phone finish">{finishes.map((item) => <button key={item.id} className={`finish-option ${finish === item.id ? "active" : ""}`} onClick={() => setFinish(item.id)} aria-pressed={finish === item.id}><span className="finish-dot" style={{ backgroundColor: item.color }} /><span>{item.name}</span></button>)}</div><span className="current-finish">Selected finish <strong>{finishes.find((item) => item.id === finish)?.name}</strong></span></Reveal><div className="finish-display"><div className="finish-halo" /><Image src="/assets/iphone-rear.png" alt={`${finishes.find((item) => item.id === finish)?.name} iPhone 18 Pro concept finish`} fill sizes="(max-width: 700px) 90vw, 48vw" /></div></div>
+        <div className="finishes-content"><Reveal className="finishes-copy"><p className="eyebrow">Make it yours</p><h2>Find your<br /><em>finish.</em></h2><p>Four considered tones. One unmistakable presence.</p><div className="finish-picker" role="group" aria-label="Phone finish">{finishes.map((item) => <button key={item.id} className={`finish-option ${finish === item.id ? "active" : ""}`} onClick={() => setFinish(item.id)} aria-pressed={finish === item.id}><span className="finish-dot" style={{ backgroundColor: item.color }} /><span>{item.name}</span></button>)}</div><span className="current-finish">Selected finish <strong>{finishes.find((item) => item.id === finish)?.name}</strong></span></Reveal><div className="finish-display"><div className="finish-halo" /><Image src={finish === "graphite" ? "/assets/iphone-pair.png" : `/assets/iphone-${finish}.png`} alt={`${finishes.find((item) => item.id === finish)?.name} iPhone 18 Pro concept finish`} fill sizes="(max-width: 700px) 90vw, 48vw" /></div></div>
       </section>
 
       <footer className="site-footer"><div className="footer-main"><p>iPhone 18 Pro</p><button onClick={() => scrollToSection("top")}>Back to top <Arrow diagonal /></button></div><div className="footer-bottom"><span>AN INDEPENDENT DESIGN CONCEPT</span><span>MADE TO BE EXPLORED</span></div></footer>
