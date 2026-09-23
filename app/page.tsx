@@ -75,7 +75,7 @@ export default function Home() {
         <Reveal className="overview-heading"><p className="eyebrow">The feeling comes first</p><h2>Extraordinary,<br /><em>by design.</em></h2></Reveal>
         <div className="overview-grid">
           <Reveal className="overview-intro" delay={100}><p>Every curve, every reflection, every interaction considered. An experience that feels as remarkable as it looks.</p><button className="text-link" onClick={() => scrollToSection("design")}>Explore the design <Arrow /></button></Reveal>
-          <Reveal className="overview-art" delay={180}><div className="overview-art-orb" /><Image src="/assets/iphone-rear.png" alt="Graphite phone floating over a sage backdrop" fill sizes="(max-width: 700px) 100vw, 55vw" /></Reveal>
+          <Reveal className="overview-art" delay={180}><div className="overview-art-orb" /><Image src="/assets/iphone-rear.png" alt="Graphite phone floating over a soft pink backdrop" fill sizes="(max-width: 700px) 100vw, 55vw" /></Reveal>
         </div>
         <div className="section-bottom"><span>FORM MEETS FEELING</span><span>SCROLL TO EXPLORE ↓</span></div>
       </section>

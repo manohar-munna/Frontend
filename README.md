@@ -13,11 +13,11 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Interactions
 
-- A burgundy welcome curtain opens onto the product hero.
-- Each scroll gesture changes the phone finish and fades the stage to its matching color. The cards form a continuous, linear loop and can also be selected directly.
+- A burgundy curtain opens with hand-drawn welcome lettering. The rock and main phone rise into view, followed by cards entering from both sides.
+- The phone colors autoplay around a continuous arch. Each change reveals its matching background as a ripple from the phone; cards can also be selected directly or paused.
 - The camera section changes composition as the page scrolls.
 - Finish controls show dedicated transparent phone renders for each color.
 - Navigation and layouts adapt to smaller screens.
 - Reduced-motion preferences are respected.
 
-The three original concept boards are in `design-concepts/`. The four phone renders in `public/assets/` are standalone transparent PNGs; the card surfaces and stage are built in CSS.
+The three original concept boards are in `design-concepts/`. The four phone renders and mossy rock in `public/assets/` are standalone transparent PNGs; the lettering, cards, arch, and stage are built in SVG/CSS.
