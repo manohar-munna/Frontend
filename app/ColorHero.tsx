@@ -8,6 +8,7 @@ const colors = [
   { name: "Pearl", image: "/assets/iphone-pearl.png", outer: "#d6d0ca", stage: "#b9b2ac", glow: "#f2eee8", ink: "#2d2527" },
   { name: "Graphite", image: "/assets/iphone-pair.png", outer: "#57585a", stage: "#202124", glow: "#67696a", ink: "#f8f7f3" },
   { name: "Sage", image: "/assets/iphone-sage.png", outer: "#718579", stage: "#243e34", glow: "#5b806d", ink: "#f4f7f1" },
+  { name: "Midnight", image: "/assets/iphone-midnight.png", outer: "#344c70", stage: "#10233f", glow: "#315b91", ink: "#f2f6ff" },
 ] as const;
 
 const COUNT = colors.length;
@@ -33,6 +34,7 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
   const activeRef = useRef(0);
   const rippleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [active, setActive] = useState(0);
+  const [outgoing, setOutgoing] = useState<number | null>(null);
   const [baseIndex, setBaseIndex] = useState(0);
   const [ripple, setRipple] = useState<{ index: number; key: number } | null>(null);
   const [position, setPosition] = useState(START);
@@ -54,10 +56,10 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
       return;
     }
     const timers = [
-      setTimeout(() => setCurtainOpening(true), 1050),
-      setTimeout(() => setSceneReady(true), 2150),
-      setTimeout(() => setIntroDone(true), 2450),
-      setTimeout(() => setEntranceDone(true), 4050),
+      setTimeout(() => setCurtainOpening(true), 2150),
+      setTimeout(() => setSceneReady(true), 3250),
+      setTimeout(() => setIntroDone(true), 3500),
+      setTimeout(() => setEntranceDone(true), 5050),
     ];
     return () => timers.forEach(clearTimeout);
   }, []);
@@ -82,6 +84,7 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
     positionRef.current = nextPosition;
     activeRef.current = nextActive;
     setPosition(nextPosition);
+    setOutgoing(previous);
     setActive(nextActive);
     if (rippleTimer.current) {
       clearTimeout(rippleTimer.current);
@@ -91,8 +94,9 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
     rippleTimer.current = setTimeout(() => {
       setBaseIndex(nextActive);
       setRipple(null);
+      setOutgoing(null);
       rippleTimer.current = null;
-    }, 1060);
+    }, 1330);
   }, []);
 
   useEffect(() => {
@@ -122,6 +126,8 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
   const themeStyle = {
     "--hero-outer": base.outer,
     "--hero-stage": base.stage,
+    "--hero-border-stage": theme.stage,
+    "--hero-border-outer": theme.outer,
     "--hero-glow": theme.glow,
     "--hero-ink": theme.ink,
   } as CSSProperties;
@@ -191,7 +197,7 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
                 fill
                 priority={index === 0}
                 sizes="(max-width: 700px) 85vw, 43vw"
-                className={index === active ? "visible" : ""}
+                className={index === active ? "visible" : index === outgoing ? "outgoing" : ""}
               />
             ))}
           </div>
