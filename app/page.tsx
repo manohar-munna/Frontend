@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import HeroExperience from "./HeroExperience";
 
 type Finish = "graphite" | "pearl" | "sage" | "stone";
 
@@ -18,10 +19,6 @@ function Arrow({ diagonal = false }: { diagonal?: boolean }) {
   ) : (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
   );
-}
-
-function Plus() {
-  return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>;
 }
 
 function Reveal({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
@@ -44,10 +41,8 @@ function scrollToSection(id: string) {
 
 export default function Home() {
   const [finish, setFinish] = useState<Finish>("graphite");
-  const [heroMode, setHeroMode] = useState<"rest" | "camera" | "material">("rest");
   const [cameraStep, setCameraStep] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [pointer, setPointer] = useState({ x: 0, y: 0 });
   const cameraStepsRef = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
@@ -58,11 +53,6 @@ export default function Home() {
     cameraStepsRef.current.forEach((step) => step && observer.observe(step));
     return () => observer.disconnect();
   }, []);
-
-  const chooseHeroCard = (mode: "camera" | "material", target: string) => {
-    setHeroMode(mode);
-    window.setTimeout(() => scrollToSection(target), 550);
-  };
 
   return (
     <main>
@@ -78,43 +68,7 @@ export default function Home() {
         <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen}><span /><span /></button>
       </header>
 
-      <section id="top" className={`hero hero-${heroMode}`} onPointerMove={(e) => {
-        if (e.pointerType !== "mouse") return;
-        const rect = e.currentTarget.getBoundingClientRect();
-        setPointer({ x: (e.clientX - rect.left) / rect.width - 0.5, y: (e.clientY - rect.top) / rect.height - 0.5 });
-      }} onPointerLeave={() => setPointer({ x: 0, y: 0 })}>
-        <div className="hero-grain" />
-        <div className="hero-orb" />
-        <div className="hero-side-label">A STUDY IN WHAT&apos;S NEXT <span>—</span> 2026 CONCEPT</div>
-        <div className="hero-copy">
-          <p className="eyebrow">Introducing a new perspective</p>
-          <h1><span>The next</span><span>perspective.</span></h1>
-          <p className="hero-subtitle">iPhone 18 Pro</p>
-          <button className="pill-button" onClick={() => scrollToSection("overview")}>Discover <Arrow /></button>
-        </div>
-        <div className="hero-product" style={{ transform: `translate3d(${pointer.x * 15}px, ${pointer.y * 10}px, 0)` }}>
-          <div className="product-halo" />
-          <Image src="/assets/iphone-pair.png" alt="Concept rendering of two graphite iPhone 18 Pro phones" fill priority sizes="(max-width: 700px) 95vw, 62vw" className="hero-phone" />
-        </div>
-        <div className="hero-rock" />
-        <button className="floating-card camera-card" onClick={() => chooseHeroCard("camera", "camera")} aria-label="Explore the camera design">
-          <span className="card-image lens-image"><Image src="/assets/iphone-rear.png" alt="" fill sizes="190px" /></span>
-          <span className="card-plus"><Plus /></span>
-          <span className="card-text">A closer look<br />at what moves you.</span>
-        </button>
-        <button className="floating-card material-card" onClick={() => chooseHeroCard("material", "design")} aria-label="Explore the phone material">
-          <span className="card-image metal-image" />
-          <span className="card-plus"><Plus /></span>
-          <span className="card-text">Titanium.<br />Made to feel different.</span>
-        </button>
-        <div className="floating-card color-card">
-          <span className="card-title">Colours</span>
-          <div className="hero-swatches" aria-label="Select a finish">
-            {finishes.map((item) => <button key={item.id} className={`swatch ${finish === item.id ? "selected" : ""}`} style={{ backgroundColor: item.color }} onClick={() => { setFinish(item.id); scrollToSection("finishes"); }} aria-label={`Select ${item.name}`} aria-pressed={finish === item.id} />)}
-          </div>
-        </div>
-        <button className="scroll-cue" onClick={() => scrollToSection("overview")}><span>Scroll to explore</span><span className="scroll-line" /></button>
-      </section>
+      <HeroExperience onExplore={scrollToSection} />
 
       <section id="overview" className="overview-section section-shell">
         <div className="section-index"><span>01 / 04</span><span>OVERVIEW</span></div>
