@@ -22,7 +22,7 @@ function WelcomeLettering() {
   );
 }
 
-export default function ColorHero({ onExplore }: { onExplore: (section: string) => void }) {
+export default function ColorHero() {
   const panelRef = useRef<HTMLDivElement>(null);
   const positionRef = useRef(START);
   const activeRef = useRef(0);
@@ -40,7 +40,7 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
   const [introDone, setIntroDone] = useState(false);
   const [sceneReady, setSceneReady] = useState(false);
   const [entranceDone, setEntranceDone] = useState(false);
-  const [playing, setPlaying] = useState(true);
+  const [autoPlay, setAutoPlay] = useState(true);
 
   useEffect(() => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -48,7 +48,7 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
       setIntroDone(true);
       setSceneReady(true);
       setEntranceDone(true);
-      setPlaying(false);
+      setAutoPlay(false);
       return;
     }
     const timers = [
@@ -98,12 +98,12 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
   }, []);
 
   useEffect(() => {
-    if (!entranceDone || !playing) return;
+    if (!entranceDone || !autoPlay) return;
     const interval = setInterval(() => {
       if (document.visibilityState === "visible" && panelRef.current && panelRef.current.getBoundingClientRect().bottom > 0) advance(1);
     }, 3200);
     return () => clearInterval(interval);
-  }, [advance, entranceDone, playing]);
+  }, [advance, entranceDone, autoPlay]);
 
   const normalize = () => {
     const current = positionRef.current;
@@ -146,9 +146,7 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
           {ripple && <div key={`stage-${ripple.key}`} className="hero-ripple hero-ripple-stage" style={{ backgroundColor: colors[ripple.index].stage }} />}
           <div className="color-glow" />
           <div className="reel-panel-top">
-            <span className="reel-mark">iPhone 18 Pro</span>
             <span className="color-count">0{active + 1} <span>/ 0{COUNT}</span></span>
-            <button className="reel-mini-action" onClick={() => onExplore("overview")} aria-label="Explore the site">↗</button>
           </div>
 
           <div className="color-rail" aria-label="Phone color carousel">
@@ -186,6 +184,8 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
             })}
           </div>
 
+          <div className="hero-rock-side hero-rock-left" aria-hidden="true"><Image src="/assets/moss-rock-left.png" alt="" fill sizes="(max-width: 700px) 50vw, 35vw" /></div>
+          <div className="hero-rock-side hero-rock-right" aria-hidden="true"><Image src="/assets/moss-rock-right.png" alt="" fill sizes="(max-width: 700px) 50vw, 35vw" /></div>
           <div className="hero-rock" aria-hidden="true"><Image src="/assets/moss-rock.png" alt="" fill priority sizes="(max-width: 700px) 100vw, 85vw" /></div>
           <div className="color-product" aria-live="polite">
             {colors.map((color, index) => (
@@ -201,11 +201,8 @@ export default function ColorHero({ onExplore }: { onExplore: (section: string) 
             ))}
           </div>
           {entranceDone && <div className="color-product-caption" key={theme.name}>{theme.name}</div>}
-          {entranceDone && <button className="color-explore" onClick={() => onExplore("finishes")}>Explore finishes <span>↗</span></button>}
-          <div className="color-heading"><span>iPhone 18 Pro</span><h1>Choose your perspective.</h1></div>
-          <div className="color-hint"><button type="button" onClick={() => setPlaying((value) => !value)} aria-label={playing ? "Pause color animation" : "Play color animation"}>{playing ? "Ⅱ" : "▶"}</button><span>{playing ? "COLORS IN MOTION" : "MOTION PAUSED"}</span></div>
+          <div className="color-heading"><h1>Choose your perspective.</h1></div>
         </div>
-        <div className="color-footer"><span>THE NEW PRO, IN COLOR</span><span>AN INDEPENDENT CONCEPT</span></div>
       </section>
     </>
   );

@@ -69,7 +69,7 @@ export default function Home() {
         <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen}><span /><span /></button>
       </header>
 
-      <ColorHero onExplore={scrollToSection} />
+      <ColorHero />
 
       <section id="overview" className="overview-section section-shell">
         <div className="section-index"><span>01 / 04</span><span>OVERVIEW</span></div>
