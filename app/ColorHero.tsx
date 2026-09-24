@@ -20,10 +20,10 @@ const ENTRANCE_TRAVEL = 2;
 const mix = (from: number, to: number, progress: number) => from + (to - from) * progress;
 const smoothstep = (progress: number) => progress * progress * (3 - 2 * progress);
 
-function WelcomeLettering() {
+function HelloLettering() {
   return (
-    <svg viewBox="0 0 550 155" role="img" aria-label="welcome" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
-      <path pathLength="1" d="M25 76 C22 112 31 129 46 108 L67 77 C61 106 70 129 84 110 L109 77 C112 87 111 97 108 103 C130 91 148 72 152 86 C156 98 126 106 116 104 C122 130 153 125 170 101 C190 76 213 26 198 22 C176 15 175 100 184 116 C192 131 207 111 216 99 C225 84 241 77 253 84 C258 87 252 91 247 88 C235 81 220 91 220 106 C220 121 245 125 266 101 C276 83 291 76 299 79 C278 74 269 113 284 121 C306 132 322 85 302 80 C311 97 326 104 339 94 C349 78 350 83 348 98 L346 119 C355 98 369 77 379 84 C388 92 371 117 378 121 C391 93 406 76 416 85 C425 96 405 118 416 122 C431 127 447 101 458 91 C460 98 460 101 456 103 C477 90 495 72 499 86 C503 99 472 106 461 104 C468 130 503 126 525 98" />
+    <svg viewBox="0 0 286 160" role="img" aria-label="hello" fill="none" stroke="currentColor" strokeWidth="6.5" strokeLinecap="round" strokeLinejoin="round">
+      <path pathLength="1" d="M29 108 C40 102 48 95 53 81 C58 66 56 44 64 43 C76 40 76 55 65 78 C59 91 51 108 50 112 C54 101 61 78 71 79 C84 80 70 108 81 112 C91 117 97 99 103 89 C111 77 120 75 121 84 C122 94 111 102 99 101 C104 118 121 116 135 98 C145 82 149 55 153 46 C157 37 165 40 166 50 C168 67 144 107 148 112 C155 119 167 105 173 94 C182 78 185 56 190 46 C195 37 202 40 202 50 C204 67 182 107 186 112 C192 120 204 105 212 93 C220 80 231 77 237 84 C245 92 242 107 232 112 C223 118 210 111 212 99 C213 88 225 78 235 84 C242 89 239 96 244 97 C250 98 255 88 258 77" />
     </svg>
   );
 }
@@ -311,7 +311,7 @@ export default function ColorHero() {
           <div className="curtain-half curtain-left" />
           <div className="curtain-half curtain-right" />
           <span className="curtain-seam" />
-          <span className="curtain-word"><WelcomeLettering /></span>
+          <span className="curtain-word"><HelloLettering /></span>
         </div>
       )}
       <section ref={heroRef} id="top" className={`reel-hero color-hero ${sceneReady ? "scene-ready" : ""} ${entranceDone ? "entrance-complete" : ""} ${scrollProgress > 0.001 ? "is-scrolling" : ""}`} style={themeStyle} aria-label="Explore iPhone 18 Pro colors and design">
