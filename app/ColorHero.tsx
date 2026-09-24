@@ -240,7 +240,8 @@ export default function ColorHero() {
   const theme = colors[active];
   const base = colors[baseIndex];
   const phaseOne = clamp01(scrollProgress / 0.54);
-  const lensPhase = smoothstep(clamp01((scrollProgress - 0.54) / 0.4));
+  const lensPhase = smoothstep(clamp01((scrollProgress - 0.54) / 0.18));
+  const explosion = clamp01((scrollProgress - 0.75) / 0.23);
   const lensReveal = smoothstep(clamp01((lensPhase - 0.05) / 0.28));
   const reveal = smoothstep(clamp01((phaseOne - 0.06) / 0.34));
   const motion = smoothstep(clamp01((phaseOne - 0.13) / 0.74));
@@ -254,13 +255,13 @@ export default function ColorHero() {
   const artHeight = 1310 * assetScale;
   const endScale = panelSize.height * (mobile ? 0.37 : 0.66) / (artHeight * (1136 / 1310));
   const baseScale = mix(1, endScale, motion);
-  const productScale = baseScale * mix(1, mobile ? 1.12 : 1.28, lensPhase);
+  const productScale = baseScale * mix(1, mobile ? 1.43 : 1.17, lensPhase);
   const shift = panelSize.width * (mobile ? 0.03 : 0.225) * motion
     + artWidth * 0.15 * (baseScale - 1 + motion)
-    - panelSize.width * (mobile ? 0.36 : 0.55) * lensPhase;
+    - panelSize.width * (mobile ? 0.19 : 0.49) * lensPhase;
   const topBase = mobile ? 40 : 41;
   const topShift = panelSize.height * (mix(topBase, mobile ? 65 : 49, motion) - topBase) / 100
-    - panelSize.height * (mobile ? 0.1 : 0) * lensPhase;
+    - panelSize.height * (mobile ? 0.09 : 0) * lensPhase;
   const turn = smoothstep(clamp01((phaseOne - 0.29) / 0.6));
   const railCards = useMemo(() => mounted && Array.from({ length: COUNT * 5 }, (_, index) => START - COUNT * 2 + index).map((virtualIndex) => {
     const travel = ENTRANCE_TRAVEL * (1 - smoothstep(wheelProgress));
@@ -373,8 +374,8 @@ export default function ColorHero() {
                   </div>
                 </div>
               ))}
-              <div className="three-phone-layer" style={{ opacity: modelReady ? 1 : 0 }}>
-                <ThreePhone color={theme.name} turn={turn} lensPhase={lensPhase} onReady={handleModelReady} />
+              <div className="three-phone-layer" style={{ opacity: modelReady ? 1 : 0, width: `${100 + 100 * lensPhase}%`, left: `${-50 * lensPhase}%` }}>
+                <ThreePhone color={theme.name} turn={turn} lensPhase={lensPhase} explosion={explosion} compact={mobile} onReady={handleModelReady} />
               </div>
             </div>
           </div>
@@ -391,12 +392,6 @@ export default function ColorHero() {
             </div>
             <div className="design-placeholder" style={{ opacity: smoothstep(clamp01((phaseOne - 0.34) / 0.4)) * (1 - lensReveal) }}>
               <span>{theme.name.toUpperCase()}</span><span>18 / PRO</span>
-            </div>
-            <div className="camera-copy" style={{ opacity: smoothstep(clamp01((lensPhase - 0.32) / 0.42)), transform: `translateY(${Number(((1 - lensPhase) * 28).toFixed(2))}px)` }}>
-              <p className="scroll-kicker">02 / THE CAMERA</p>
-              <h2>Look<br /><em>closer.</em></h2>
-              <p className="scroll-description">The detail is in the lens.</p>
-              <span className="scroll-rule" />
             </div>
           </div>
         </div>

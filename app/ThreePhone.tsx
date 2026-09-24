@@ -157,36 +157,15 @@ function finishTint(name: FinishName, kind: "side" | "front") {
   return new THREE.Color(kind === "side" ? finishes[name].frame : finishes[name].camera);
 }
 
-function makeAperture() {
-  return new THREE.ShaderMaterial({
-    uniforms: { uOpen: { value: 0 } },
-    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-    fragmentShader: `
-      uniform float uOpen;
-      varying vec2 vUv;
-      void main() {
-        vec2 p = (vUv - 0.5) * 2.0;
-        float radius = length(p);
-        float angle = atan(p.y, p.x);
-        float blades = cos(angle * 6.0 + uOpen * 1.3);
-        float opening = mix(0.08, 0.57, uOpen);
-        float edge = opening + 0.018 * blades;
-        float pupil = 1.0 - smoothstep(edge - 0.055, edge + 0.03, radius);
-        float rim = exp(-pow((radius - edge) * 32.0, 2.0));
-        float reflection = exp(-length((p - vec2(-0.22, 0.28)) * vec2(2.0, 2.9)) * 9.0);
-        vec3 color = vec3(0.006, 0.01, 0.018);
-        color += vec3(0.035, 0.11, 0.16) * reflection;
-        color += vec3(0.09, 0.12, 0.16) * rim;
-        float alpha = uOpen * (pupil * 0.92 + rim * 0.28) * (1.0 - smoothstep(0.88, 0.98, radius));
-        gl_FragColor = vec4(color, alpha);
-        #include <colorspace_fragment>
-      }
-    `,
-    transparent: true,
-    depthWrite: false,
-    toneMapped: false,
-  });
-}
+type LensPart = {
+  mesh: THREE.Mesh;
+  material: THREE.MeshPhysicalMaterial;
+  module: number;
+  order: number;
+  distance: number;
+  baseY: number;
+  opacity: number;
+};
 
 type ModelState = {
   renderer: THREE.WebGLRenderer;
@@ -195,7 +174,7 @@ type ModelState = {
   phone: THREE.Group;
   frame: THREE.MeshPhysicalMaterial;
   cameraMetal: THREE.MeshPhysicalMaterial;
-  aperture: THREE.ShaderMaterial;
+  lensParts: LensPart[];
   photos: Photos;
   materials: { kind: PhotoKind; material: THREE.ShaderMaterial }[];
   current: FinishName;
@@ -205,24 +184,36 @@ type ModelState = {
   select: (name: FinishName) => void;
 };
 
-function setPhonePose(state: ModelState, turn: number, lensPhase: number) {
-  // Positive yaw brings the left edge and the camera cluster toward the viewer.
-  state.phone.rotation.y = THREE.MathUtils.degToRad(-34 * (1 - turn) + 15 * lensPhase);
-  state.phone.rotation.z = THREE.MathUtils.degToRad(5 * lensPhase);
-  const focusX = -160 * lensPhase;
-  const focusY = 420 * lensPhase;
-  state.camera.position.set(focusX, focusY, 2600);
-  state.camera.lookAt(focusX, focusY, 0);
-  state.camera.zoom = 1 + 1.32 * lensPhase;
+function setPhonePose(state: ModelState, turn: number, lensPhase: number, explosion: number, compact: boolean) {
+  // Turning the rear toward the left reveals the phone's left rail and makes
+  // the outward-facing optical axis project to the right of the chassis.
+  state.phone.rotation.y = THREE.MathUtils.degToRad(-34 * (1 - turn) + 34 * lensPhase);
+  state.phone.rotation.z = THREE.MathUtils.degToRad(-4 * lensPhase);
+  state.camera.position.set(0, 105 * explosion, 2600);
+  state.camera.lookAt(0, 105 * explosion, 0);
+  state.camera.zoom = 1 + 0.11 * explosion;
   state.camera.updateProjectionMatrix();
-  state.aperture.uniforms.uOpen.value = lensPhase;
+  for (const part of state.lensParts) {
+    const start = part.module / 3;
+    const moduleProgress = THREE.MathUtils.clamp((explosion - start) * 3, 0, 1);
+    const progress = THREE.MathUtils.clamp((moduleProgress - part.order * 0.032) / (1 - part.order * 0.032), 0, 1);
+    const eased = progress * progress * (3 - 2 * progress);
+    part.mesh.visible = progress > 0.001;
+    const travel = part.distance * eased * (compact ? 0.63 : 1);
+    part.mesh.position.z = D / 2 + 37 + travel;
+    // Perspective would otherwise send the top row above the canvas as its
+    // elements approach the viewer. Keep all three optical axes level.
+    const rowSeparation = part.module === 0 ? 65 : part.module === 2 ? -65 : 0;
+    part.mesh.position.y = part.baseY * (1 - travel / 2600) + rowSeparation * eased;
+    part.material.opacity = part.opacity * Math.min(1, progress * 7);
+  }
   state.render();
 }
 
-export default function ThreePhone({ color, turn, lensPhase, onReady }: { color: string; turn: number; lensPhase: number; onReady?: (ready: boolean) => void }) {
+export default function ThreePhone({ color, turn, lensPhase, explosion, compact, onReady }: { color: string; turn: number; lensPhase: number; explosion: number; compact: boolean; onReady?: (ready: boolean) => void }) {
   const mountRef = useRef<HTMLDivElement>(null);
-  const latest = useRef({ color, turn, lensPhase });
-  latest.current = { color, turn, lensPhase };
+  const latest = useRef({ color, turn, lensPhase, explosion, compact });
+  latest.current = { color, turn, lensPhase, explosion, compact };
   const stateRef = useRef<ModelState | null>(null);
 
   useEffect(() => {
@@ -326,10 +317,82 @@ export default function ThreePhone({ color, turn, lensPhase, onReady }: { color:
         add(faceUvs(new THREE.CircleGeometry(58.5, 48), x, y), rearPhoto, x, y, D / 2 + 35);
       }
 
-      // The aperture sits above the photographic lens face by a full millimeter.
-      // It only becomes visible during the close-up, avoiding overlapping depth faces.
-      const aperture = makeAperture();
-      add(new THREE.CircleGeometry(43, 72), aperture, -170, 465, D / 2 + 36);
+      // The exploded view is built from separate 3D glass, retaining rings,
+      // aperture, and sensor surfaces. Apple confirms the three 48 MP modules,
+      // a six-blade main aperture, and a tetraprism telephoto; it does not
+      // publish this model's precise optical element counts or spacing.
+      const lensParts: LensPart[] = [];
+      const addOptic = (
+        module: number,
+        x: number,
+        y: number,
+        order: number,
+        distance: number,
+        geometry: THREE.BufferGeometry,
+        options: THREE.MeshPhysicalMaterialParameters,
+        opacity = 1,
+      ) => {
+        const material = new THREE.MeshPhysicalMaterial({ ...options, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+        const mesh = add(geometry, material, x, y, D / 2 + 37);
+        mesh.visible = false;
+        lensParts.push({ mesh, material, module, order, distance, baseY: y, opacity });
+        return mesh;
+      };
+      const opticalCores = [
+        { x: -170, y: 465, elements: 7, radius: 38 }, // Main, variable aperture
+        { x: -40, y: 396, elements: 6, radius: 35 },  // Telephoto, tetraprism
+        { x: -170, y: 324, elements: 6, radius: 36 }, // Ultra Wide
+      ];
+      opticalCores.forEach(({ x, y, elements, radius }, module) => {
+        const sensor = addOptic(module, x, y, 0, 90, new THREE.BoxGeometry(66, 66, 5), {
+          color: 0x142333, metalness: 0.35, roughness: 0.18, clearcoat: 0.8,
+        });
+        sensor.rotation.z = Math.PI / 12;
+        addOptic(module, x, y, 1, 190, new THREE.TorusGeometry(radius + 6, 7, 12, 56), {
+          color: 0x15171d, metalness: 0.8, roughness: 0.24, clearcoat: 0.75,
+        });
+        if (module === 0) {
+          // Six-sided opening represents the six moving diaphragm blades seen
+          // in iFixit's iPhone 18 Pro teardown.
+          addOptic(module, x, y, 2, 285, new THREE.RingGeometry(18, radius + 4, 6), {
+            color: 0x0c1017, metalness: 0.15, roughness: 0.38,
+          });
+        } else {
+          addOptic(module, x, y, 2, 285, new THREE.TorusGeometry(radius + 2, 4, 10, 56), {
+            color: 0x171a22, metalness: 0.78, roughness: 0.23,
+          });
+        }
+        for (let index = 0; index < elements; index++) {
+          const distance = 370 + index * 101;
+          const glassRadius = radius * (0.7 + 0.22 * Math.sin((index + 1) * 1.35));
+          const glass = addOptic(module, x, y, index + 3, distance,
+            new THREE.SphereGeometry(1, 32, 16), {
+              color: index % 2 ? 0x63879e : 0x365770,
+              metalness: 0.12, roughness: 0.07, clearcoat: 1, clearcoatRoughness: 0.03,
+            }, 0.42);
+          glass.scale.set(glassRadius, glassRadius, index % 2 ? 9 : 6.5);
+          addOptic(module, x, y, index + 3, distance + 3,
+            new THREE.TorusGeometry(glassRadius + 0.5, 1.6, 8, 48), {
+              color: 0x90aabd, metalness: 0.65, roughness: 0.14,
+            }, 0.42);
+          if (index === 1 || index === 4) {
+            addOptic(module, x, y, index + 3, distance + 28,
+              new THREE.TorusGeometry(glassRadius + 3, 2.6, 8, 48), {
+                color: 0x1b2028, metalness: 0.8, roughness: 0.2,
+              }, 0.88);
+          }
+        }
+        const capDistance = 370 + elements * 101 + 65;
+        addOptic(module, x, y, elements + 3, capDistance,
+          new THREE.TorusGeometry(radius + 8, 7, 12, 64), {
+            color: 0x181b21, metalness: 0.85, roughness: 0.17, clearcoat: 0.8,
+          });
+        const cover = addOptic(module, x, y, elements + 4, capDistance + 24,
+          new THREE.SphereGeometry(1, 40, 20), {
+            color: 0x24445f, metalness: 0.1, roughness: 0.035, clearcoat: 1,
+          }, 0.36);
+        cover.scale.set(radius + 3, radius + 3, 4.8);
+      });
 
       // The reference deck already has a precisely aligned flash and dark
       // sensor. Extra disks doubled their outlines and overlapped the photo.
@@ -359,7 +422,7 @@ export default function ThreePhone({ color, turn, lensPhase, onReady }: { color:
         });
       };
       state = {
-        renderer, scene, camera, phone, frame, cameraMetal, aperture, photos, materials, current: initial, animation: 0, disposed: false, render,
+        renderer, scene, camera, phone, frame, cameraMetal, lensParts, photos, materials, current: initial, animation: 0, disposed: false, render,
         select(name) {
           if (name === this.current) return;
           if (this.animation) cancelAnimationFrame(this.animation);
@@ -396,6 +459,8 @@ export default function ThreePhone({ color, turn, lensPhase, onReady }: { color:
       stateRef.current = state;
       const resize = () => {
         renderer.setSize(container.clientWidth, container.clientHeight, false);
+        const factor = 1 + latest.current.lensPhase;
+        camera.setViewOffset(1200 * factor, 1310, 180, 0, 1200 * factor, 1310);
         render();
       };
       resize();
@@ -404,7 +469,7 @@ export default function ThreePhone({ color, turn, lensPhase, onReady }: { color:
       container.dataset.ready = "true";
       onReady?.(true);
       if (latest.current.color !== initial) state.select(latest.current.color as FinishName);
-      setPhonePose(state, latest.current.turn, latest.current.lensPhase);
+      setPhonePose(state, latest.current.turn, latest.current.lensPhase, latest.current.explosion, latest.current.compact);
       state.scene.userData.resizeObserver = resizeObserver;
     }
     start().catch((error) => {
@@ -425,7 +490,7 @@ export default function ThreePhone({ color, turn, lensPhase, onReady }: { color:
         for (const { material } of state.materials) material.dispose();
         state.frame.dispose();
         state.cameraMetal.dispose();
-        state.aperture.dispose();
+        for (const part of state.lensParts) part.material.dispose();
         for (const texture of [...Object.values(state.photos.rear), state.photos.side, state.photos.front]) texture.dispose();
       }
       stateRef.current = null;
@@ -442,8 +507,8 @@ export default function ThreePhone({ color, turn, lensPhase, onReady }: { color:
   useEffect(() => {
     const state = stateRef.current;
     if (!state) return;
-    setPhonePose(state, turn, lensPhase);
-  }, [turn, lensPhase]);
+    setPhonePose(state, turn, lensPhase, explosion, compact);
+  }, [turn, lensPhase, explosion, compact]);
 
   return <div ref={mountRef} className="three-phone" aria-hidden="true" />;
 }
