@@ -6,11 +6,11 @@ The sequence follows progress through the pinned hero:
 
 - The five-card arch fades away first.
 - Both phones begin in the selected finish, using complementary masks of the original pair image.
-- The screen-facing phone moves left and fades behind the main phone. A new selected-color rear render takes over early in the scroll while the original rear pixels remain underneath until the new surface is opaque.
+- The screen-facing phone moves left and fades behind the main phone. The opening pair then hands off to the reusable 3D model before it begins to rotate.
 - The phone gradually moves to the right and rotates from a rear three-quarter view to an upright rear view. The metal side rail narrows as the back turns toward the viewer, with no sideways roll.
 - The backdrop, display frame, and left-hand copy appear during the move, retaining the selected color theme.
 - The final composition holds for the last portion of the scroll. Scrolling upward reverses the presentation.
 
 On mobile, the copy sits above the display frame and the phone settles below it with a smaller rightward shift.
 
-Each of the five finishes has a newly generated 1024 × 1536 transparent rear render in `public/assets/iphone-rear-*-v2.png`. The artwork uses the same device pose, lenses, logo, and proportions. Each image's visible bounds are mapped to the same four phone vertices, so color changes preserve size and alignment. The original pair artwork carries the opening pose; its screen-facing phone moves left behind the rear phone. The new selected-color rear texture is layered over the original during the first portion of the scroll, then rotates through 38 degrees around the vertical axis and resolves into a square rear view. This is a surface-based rendering, not a downloadable mesh model. The earlier standalone front and rear renders are retained as assets but are no longer used by this sequence.
+The scroll phone is one procedural Three.js model in `app/ThreePhone.tsx`. Its rounded frame and back, raised camera island, three lens assemblies, flash, logo, and side buttons are separate meshes. Five material palettes and a subtle generated finish texture give the same geometry each selected color. The model turns 38 degrees around its vertical axis; the side stays attached and narrows naturally as it faces straight back. The earlier 1024 × 1536 transparent rear renders in `public/assets/iphone-rear-*-v2.png` remain as design references and are no longer used by the page.
