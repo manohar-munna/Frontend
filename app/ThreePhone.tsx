@@ -188,7 +188,7 @@ function makeIrisBlade(index: number) {
       const vertex = radial * row + arc;
       const s = radial / IRIS_RADIAL_STEPS;
       const t = arc / IRIS_ARC_STEPS;
-      const shade = 0.52 + 0.14 * Math.sin(Math.PI * t) + 0.14 * (1 - s) + 0.05 * Math.pow(1 - t, 5);
+      const shade = 0.62 + 0.035 * (1 - s) + 0.025 * (1 - t);
       colors.set([shade, shade * 0.995, shade * 1.025], vertex * 3);
       uvs.set([s * 120, t * 120], vertex * 2);
     }
@@ -211,7 +211,7 @@ function updateIrisBlade(geometry: THREE.BufferGeometry, index: number, closure:
   const row = IRIS_ARC_STEPS + 1;
   const faceCount = row * (IRIS_RADIAL_STEPS + 1);
   const sector = (Math.PI * 2) / IRIS_BLADE_COUNT;
-  const apertureRadius = THREE.MathUtils.lerp(THREE.MathUtils.lerp(45.7, 4.2, closure), 25, reopening);
+  const apertureRadius = THREE.MathUtils.lerp(THREE.MathUtils.lerp(45.7, 4.2, closure), 19.6, reopening);
   const setPoint = (vertex: number, radial: number, arc: number) => {
     const t = arc / IRIS_ARC_STEPS;
     // Each long leaf spans half the diaphragm. Its trailing end sits above
@@ -232,7 +232,8 @@ function updateIrisBlade(geometry: THREE.BufferGeometry, index: number, closure:
     const bow = radial * radial * (3 - 2 * radial);
     const x = THREE.MathUtils.lerp(innerX, outerX, bow);
     const y = THREE.MathUtils.lerp(innerY, outerY, bow);
-    const z = 1.35 * t + (1 - radial) * 0.28 + Math.sin(t * Math.PI) * Math.sin(radial * Math.PI) * 0.7;
+    // A shallow tilted plane gives each metal leaf a firm, machined face.
+    const z = 1.35 * t + (1 - radial) * 0.28;
     attribute.setXYZ(vertex, x, y, z);
   };
   for (let radial = 0; radial <= IRIS_RADIAL_STEPS; radial++) {
@@ -349,35 +350,8 @@ function updateIrisLip(geometry: THREE.BufferGeometry, blade: THREE.BufferGeomet
   lip.needsUpdate = true;
 }
 
-function makeOpticalGlass() {
-  return new THREE.ShaderMaterial({
-    uniforms: { uReveal: { value: 0 } },
-    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-    fragmentShader: `
-      uniform float uReveal;
-      varying vec2 vUv;
-      void main() {
-        vec2 p = (vUv - 0.5) * 2.0;
-        float r = length(p);
-        float dish = 1.0 - smoothstep(0.45, 0.91, r);
-        vec3 glass = mix(vec3(0.003, 0.004, 0.006), vec3(0.011, 0.013, 0.018), dish);
-        float innerBevel = exp(-pow((r - 0.71) * 22.0, 2.0));
-        glass += innerBevel * vec3(0.006, 0.007, 0.011);
-        float wideReflection = exp(-pow((p.y - 0.18 - 0.28 * p.x) * 5.0, 2.0)) * (1.0 - smoothstep(0.05, 0.65, r));
-        glass += wideReflection * vec3(0.011, 0.014, 0.022);
-        float sensor = 1.0 - smoothstep(0.13, 0.18, r);
-        vec3 sensorColor = vec3(0.007, 0.012, 0.026);
-        sensorColor += 0.10 * exp(-dot((p - vec2(-0.045, 0.055)) * 16.0, (p - vec2(-0.045, 0.055)) * 16.0)) * vec3(0.42, 0.66, 1.0);
-        sensorColor += 0.045 * exp(-dot((p - vec2(0.07, -0.06)) * 15.0, (p - vec2(0.07, -0.06)) * 15.0)) * vec3(0.72, 0.42, 1.0);
-        glass = mix(glass, sensorColor, sensor);
-        gl_FragColor = vec4(glass, uReveal * (1.0 - smoothstep(0.985, 1.0, r)));
-        #include <colorspace_fragment>
-      }
-    `,
-    transparent: true,
-    depthWrite: false,
-    toneMapped: false,
-  });
+function makeOpticalGlass(texture: THREE.Texture) {
+  return new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0, depthWrite: false, toneMapped: false });
 }
 
 function makeFlashGlass() {
@@ -390,13 +364,15 @@ function makeFlashGlass() {
       void main() {
         vec2 p = (vUv - .5) * 2.;
         float r = length(p);
-        float grooves = .026 * sin(r * 78.) * smoothstep(.13,.45,r);
-        float pearl = .48 + .21 * (1. - r) + grooves;
-        float highlight = .22 * exp(-length((p - vec2(-.24,.29)) * vec2(4.,6.)));
-        float center = .13 * exp(-pow(r * 4.5,2.));
-        vec3 color = vec3(pearl * .96,pearl * .97,pearl) + vec3(highlight + center);
-        color *= 1. - .22 * smoothstep(.78,.99,r);
-        gl_FragColor = vec4(color, uReveal * (1. - smoothstep(.96,1.,r)));
+        vec2 cell = floor(vUv * 360.);
+        float grain = fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453) - .5;
+        float micro = sin(p.x * 116.) * sin(p.y * 103.) * .014;
+        float striation = sin(r * 95. + p.x * 11.) * .008;
+        float glass = .56 + .08 * (1. - r) + grain * .075 + micro + striation;
+        float reflection = .055 * exp(-pow((p.y + .27 * p.x - .32) * 7., 2.));
+        vec3 color = vec3(glass * .98, glass * .99, glass) + reflection;
+        color *= 1. - .23 * smoothstep(.74,.99,r);
+        gl_FragColor = vec4(color, uReveal * .9 * (1. - smoothstep(.96,1.,r)));
         #include <colorspace_fragment>
       }
     `,
@@ -452,40 +428,6 @@ function makeIrisGrain() {
   return texture;
 }
 
-function makeIrisGlass() {
-  return new THREE.ShaderMaterial({
-    uniforms: { uReveal: { value: 0 } },
-    vertexShader: `varying vec2 vSurface; varying vec3 vNormal; void main() { vSurface = position.xy / 33.0; vNormal = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-    fragmentShader: `
-      uniform float uReveal;
-      varying vec2 vSurface;
-      varying vec3 vNormal;
-      void main() {
-        vec2 p = vSurface;
-        float r = length(p);
-        float crown = exp(-pow((p.y - 0.42 + 0.34 * p.x * p.x) * 10.0, 2.0));
-        float violet = exp(-pow((p.y + 0.03 + 0.14 * p.x * p.x) * 15.0, 2.0));
-        float lower = exp(-pow((p.y + 0.5 - 0.24 * p.x * p.x) * 13.0, 2.0));
-        float edge = 1.0 - smoothstep(0.66, 1.0, r);
-        vec3 color = vec3(0.006, 0.006, 0.012);
-        color += crown * vec3(0.072, 0.067, 0.085);
-        color += violet * vec3(0.043, 0.018, 0.089);
-        color += lower * vec3(0.02, 0.01, 0.04);
-        color *= 0.37 + 0.63 * edge;
-        color *= 0.7 + 0.3 * sqrt(max(0.0, 1.0 - r * r));
-        float glint = pow(max(dot(normalize(vNormal), normalize(vec3(-0.34, 0.58, 1.0))), 0.0), 38.0);
-        color += glint * vec3(0.022, 0.022, 0.032);
-        gl_FragColor = vec4(color, uReveal);
-        #include <colorspace_fragment>
-      }
-    `,
-    side: THREE.FrontSide,
-    transparent: true,
-    depthWrite: false,
-    toneMapped: false,
-  });
-}
-
 type ModelState = {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
@@ -495,8 +437,8 @@ type ModelState = {
   frame: THREE.MeshPhysicalMaterial;
   cameraMetal: THREE.MeshPhysicalMaterial;
   detailMaterials: THREE.Material[];
-  opticalGlass: THREE.ShaderMaterial;
-  irisGlass: THREE.ShaderMaterial;
+  opticalGlass: THREE.MeshBasicMaterial;
+  opticalTexture: THREE.Texture;
   flashGlass: THREE.ShaderMaterial;
   grain: THREE.Texture;
   bladeTexture: THREE.Texture;
@@ -534,11 +476,12 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
   for (const material of state.detailMaterials) {
     if (material instanceof THREE.MeshPhysicalMaterial || material instanceof THREE.MeshBasicMaterial) material.opacity = detailReveal;
   }
-  state.opticalGlass.uniforms.uReveal.value = detailReveal;
+  // Let the photographic lenses carry the phone move; reveal the deeper
+  // optical stack only once the camera zoom has begun.
+  state.opticalGlass.opacity = THREE.MathUtils.smoothstep(shutterPhase, 0.3, 0.82);
   state.flashGlass.uniforms.uReveal.value = detailReveal;
   const closure = THREE.MathUtils.smoothstep(shutterPhase, 0.43, 0.76);
   const reopening = THREE.MathUtils.smoothstep(shutterPhase, 0.76, 1);
-  state.irisGlass.uniforms.uReveal.value = THREE.MathUtils.smoothstep(closure, 0.18, 0.55);
   state.irisAssembly.visible = closure > 0.001;
   state.irisAssembly.rotation.z = 0.2 * (closure - reopening);
   const motion = closure + reopening;
@@ -593,7 +536,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
     let renderFrame = 0;
     let state: ModelState | null = null;
     const loader = new THREE.TextureLoader();
-    const sources = [...names.map((name) => finishes[name].rear), "/assets/iphone-side-burgundy-v3.png", "/assets/iphone-front-burgundy-v3.png"];
+    const sources = [...names.map((name) => finishes[name].rear), "/assets/iphone-side-burgundy-v3.png", "/assets/iphone-front-burgundy-v3.png", "/assets/optical-glass-v1.webp"];
 
     async function start() {
       const loaded = await Promise.all(sources.map((src) => loader.loadAsync(src)));
@@ -677,8 +620,8 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       const barrelBlack = detail(0x080a0d, 0.44, 0.24);
       const polishedEdge = detail(new THREE.Color(finishes[initial].frame).lerp(new THREE.Color(0x111316), 0.52), 0.78, 0.24);
       const bladeTexture = makeIrisGrain();
-      const opticalGlass = makeOpticalGlass();
-      detailMaterials.push(opticalGlass);
+      const opticalTexture = loaded[7];
+      const opticalGlass = makeOpticalGlass(opticalTexture);
       const lenses = [
         [-170, 465],
         [-40, 396],
@@ -722,13 +665,6 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       const irisAssembly = new THREE.Group();
       irisAssembly.position.set(-170, 465, D / 2 + 40.4);
       phone.add(irisAssembly);
-      const irisGlass = makeIrisGlass();
-      detailMaterials.push(irisGlass);
-      const glassDome = new THREE.Mesh(new THREE.SphereGeometry(33, 96, 64), irisGlass);
-      glassDome.scale.z = 0.16;
-      glassDome.position.z = -6;
-      glassDome.renderOrder = 30;
-      irisAssembly.add(glassDome);
       const bladePalette = [0x222326, 0x28292c, 0x212225, 0x26272a, 0x232427, 0x29292d];
       const irisBlades = bladePalette.map((color, index) => {
         const geometry = makeIrisBlade(index);
@@ -767,11 +703,13 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
         return { geometry, material, seam, seamMaterial, edge, edgeMaterial, lip, lipMaterial };
       });
       const shutterRings = [
-        new THREE.MeshPhysicalMaterial({ color: 0x13151a, metalness: 0.78, roughness: 0.23, clearcoat: 0.8, transparent: true, opacity: 0, depthWrite: false }),
-        new THREE.MeshPhysicalMaterial({ color: 0x343139, metalness: 0.68, roughness: 0.28, clearcoat: 0.7, transparent: true, opacity: 0, depthWrite: false }),
+        new THREE.MeshPhysicalMaterial({ color: 0x090b0e, metalness: 0.62, roughness: 0.32, clearcoat: 0.6, transparent: true, opacity: 0, depthWrite: false }),
+        new THREE.MeshPhysicalMaterial({ color: 0x26272b, metalness: 0.54, roughness: 0.36, clearcoat: 0.32, transparent: true, opacity: 0, depthWrite: false }),
       ];
-      add(new THREE.TorusGeometry(53, 3, 16, 128), shutterRings[0], -170, 465, D / 2 + 41.2);
-      add(new THREE.TorusGeometry(46, 1.25, 12, 128), shutterRings[1], -170, 465, D / 2 + 42);
+      // Recessed glass, interleaved leaves, and forward retaining ring occupy
+      // separate depth planes, so the macro zoom keeps a visible well.
+      add(new THREE.TorusGeometry(53, 3.2, 24, 192), shutterRings[0], -170, 465, D / 2 + 44);
+      add(new THREE.TorusGeometry(46, 0.75, 12, 192), shutterRings[1], -170, 465, D / 2 + 42.8);
 
       const frontGlass = add(faceUvs(new THREE.ShapeGeometry(roundedShape(W - 10, H - 10, R - 7), 24)), frontPhoto, 0, 0, -D / 2 - 2);
       frontGlass.rotation.y = Math.PI;
@@ -798,7 +736,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
         });
       };
       state = {
-        renderer, scene, environment, camera, phone, frame, cameraMetal, detailMaterials, opticalGlass, irisGlass, flashGlass, grain, bladeTexture, irisAssembly, irisBlades, irisMotion: -1, shutterRings, photos, materials, current: initial, animation: 0, disposed: false, render,
+        renderer, scene, environment, camera, phone, frame, cameraMetal, detailMaterials, opticalGlass, opticalTexture, flashGlass, grain, bladeTexture, irisAssembly, irisBlades, irisMotion: -1, shutterRings, photos, materials, current: initial, animation: 0, disposed: false, render,
         select(name) {
           if (name === this.current) return;
           if (this.animation) cancelAnimationFrame(this.animation);
@@ -870,6 +808,8 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
         state.frame.dispose();
         state.cameraMetal.dispose();
         for (const material of state.detailMaterials) material.dispose();
+        state.opticalGlass.dispose();
+        state.opticalTexture.dispose();
         state.grain.dispose();
         state.bladeTexture.dispose();
         state.environment.dispose();
