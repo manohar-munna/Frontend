@@ -13,7 +13,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Interactions
 
-- A burgundy curtain opens after connected hello lettering draws and fades. The rock and main phone rise into view, followed by a 3.2-second carousel entrance that travels two card positions into a five-card arch.
+- A burgundy curtain opens after connected welcome lettering draws and fades. The rock and main phone rise into view, followed by a 3.2-second carousel entrance that travels two card positions into a five-card arch.
 - Five phone colors autoplay around a continuous arch with two distinct cards on each side. Each change crossfades the phone and sends a soft ripple from its center; cards can also be selected directly.
 - The hero stays pinned during scrolling. Both phones retain the selected finish. The screen-facing phone slides left and fades behind the main phone, which moves right and turns into its display frame. Scrolling back reverses the sequence.
 - One reusable Three.js phone is visible from the opening pose through the final rear view. Its rounded chassis, rear and front surfaces, raised camera deck, lens barrels, side rail, and controls have 3D geometry. High-resolution rear photography supplies the precisely aligned flash, sensor, and finish detail; matching side and front references complete the phone. The same model changes textures and metal color for all five finishes.

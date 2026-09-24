@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import ThreePhone from "./ThreePhone";
-import { helloOutline, helloTrace } from "./hello-lettering-paths";
 
 const colors = [
   { name: "Burgundy", image: "/assets/iphone-burgundy.png", outer: "#672738", stage: "#2c101c", glow: "#8e3951", ink: "#fff4f1" },
@@ -21,15 +20,10 @@ const ENTRANCE_TRAVEL = 2;
 const mix = (from: number, to: number, progress: number) => from + (to - from) * progress;
 const smoothstep = (progress: number) => progress * progress * (3 - 2 * progress);
 
-function HelloLettering() {
+function WelcomeLettering() {
   return (
-    <svg viewBox="0 0 286 156" role="img" aria-label="hello">
-      <defs>
-        <mask id="hello-writing-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="286" height="156">
-          <path className="hello-write-path" pathLength="1" d={helloTrace} fill="none" stroke="white" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" />
-        </mask>
-      </defs>
-      <path d={helloOutline} fill="currentColor" fillRule="evenodd" mask="url(#hello-writing-mask)" />
+    <svg viewBox="0 0 550 155" role="img" aria-label="welcome" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
+      <path pathLength="1" d="M25 76 C22 112 31 129 46 108 L67 77 C61 106 70 129 84 110 L109 77 C112 87 111 97 108 103 C130 91 148 72 152 86 C156 98 126 106 116 104 C122 130 153 125 170 101 C190 76 213 26 198 22 C176 15 175 100 184 116 C192 131 207 111 216 99 C225 84 241 77 253 84 C258 87 252 91 247 88 C235 81 220 91 220 106 C220 121 245 125 266 101 C276 83 291 76 299 79 C278 74 269 113 284 121 C306 132 322 85 302 80 C311 97 326 104 339 94 C349 78 350 83 348 98 L346 119 C355 98 369 77 379 84 C388 92 371 117 378 121 C391 93 406 76 416 85 C425 96 405 118 416 122 C431 127 447 101 458 91 C460 98 460 101 456 103 C477 90 495 72 499 86 C503 99 472 106 461 104 C468 130 503 126 525 98" />
     </svg>
   );
 }
@@ -317,7 +311,7 @@ export default function ColorHero() {
           <div className="curtain-half curtain-left" />
           <div className="curtain-half curtain-right" />
           <span className="curtain-seam" />
-          <span className="curtain-word"><HelloLettering /></span>
+          <span className="curtain-word"><WelcomeLettering /></span>
         </div>
       )}
       <section ref={heroRef} id="top" className={`reel-hero color-hero ${sceneReady ? "scene-ready" : ""} ${entranceDone ? "entrance-complete" : ""} ${scrollProgress > 0.001 ? "is-scrolling" : ""}`} style={themeStyle} aria-label="Explore iPhone 18 Pro colors and design">
