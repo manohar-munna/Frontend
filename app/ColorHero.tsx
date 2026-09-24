@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { phonePerspective } from "./phone-perspective";
 
 const colors = [
   { name: "Burgundy", image: "/assets/iphone-burgundy.png", outer: "#672738", stage: "#2c101c", glow: "#8e3951", ink: "#fff4f1" },
@@ -223,7 +224,8 @@ export default function ColorHero() {
   const shift = panelSize.width * (mobile ? 0.03 : 0.225) * motion
     + artWidth * 0.15 * (productScale - 1 + motion);
   const phoneTop = mix(mobile ? 40 : 41, mobile ? 65 : 49, motion);
-  const turn = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.3) / 0.57)));
+  const turn = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.22) / 0.67)));
+  const perspective = phonePerspective(turn, assetScale);
   useEffect(() => {
     document.documentElement.style.setProperty("--header-ink", theme.ink);
   }, [theme.ink]);
@@ -303,12 +305,23 @@ export default function ColorHero() {
           <div className="hero-rock" aria-hidden="true" style={sceneReady ? { opacity: 1 - reveal } : undefined}><Image src="/assets/moss-rock.png" alt="" fill priority sizes="(max-width: 700px) 100vw, 85vw" /></div>
           <div ref={productRef} className="color-product" role="img" aria-label={`${theme.name} iPhone 18 Pro concept`} style={sceneReady ? { top: `${phoneTop}%`, transform: `translate(calc(-50% + ${shift}px), -50%) scale(${productScale})` } : undefined}>
             <div className="product-artboard" style={{ width: artWidth, height: artHeight }}>
-              {(["companion", "main"] as const).map((part) => (
+              <svg className="phone-surface-masks" width="0" height="0" aria-hidden="true">
+                <defs>
+                  <clipPath id="phone-rear-surface" clipPathUnits="objectBoundingBox">
+                    <path d="M0 0 H.45 Q.52 0 .52 .107 V.878 Q.52 .962 .45 .962 H0 Z" />
+                  </clipPath>
+                  <clipPath id="phone-rail-surface" clipPathUnits="objectBoundingBox">
+                    <path clipRule="evenodd" d="M0 0 H.56 V.14 L.5525 .15 V1 H0 Z M0 0 H.45 Q.52 0 .52 .107 V.878 Q.52 .962 .45 .962 H0 Z" />
+                  </clipPath>
+                </defs>
+              </svg>
+              {(["companion", "rail", "main"] as const).map((part) => (
                 <div key={part} className={`product-layer product-${part}`} style={part === "companion" ? {
                   opacity: 1 - companionExit,
                   transform: `translate3d(${-artWidth * 0.3 * companionExit}px, ${artHeight * 0.015 * companionExit}px, 0)`,
                 } : {
-                  transform: `rotateY(${turn * 18}deg) rotateZ(${-turn * 3}deg)`,
+                  transform: part === "main" ? perspective.rear : perspective.rail,
+                  opacity: part === "rail" ? 1 - smoothstep(Math.max(0, Math.min(1, (turn - 0.7) / 0.3))) : 1,
                 }}>
                   <div className="product-layer-source">
                     {colors.map((color, index) => (
