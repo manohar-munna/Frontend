@@ -47,13 +47,16 @@
 .color-product { position: absolute; z-index: 11; left: 50%; top: 41%; width: clamp(400px,43vw,640px); height: 72%; opacity: 0; transform: translate(-50%,60%) scale(.91); transition: transform 1.95s cubic-bezier(.18,.68,.17,1) .8s,opacity 1.45s ease .8s; pointer-events: none; }
 .scene-ready .color-product { opacity: 1; transform: translate(-50%,-50%) scale(1); }
 .entrance-complete .color-product,.entrance-complete .hero-rock { transition: none; }
-.product-artboard { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); perspective: 1300px; }
-.product-layer { position: absolute; inset: 0; transform-origin: 35% 49.5%; will-change: transform,opacity; }
+.product-artboard { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); }
+.product-layer { position: absolute; inset: 0; transform-origin: 0 0; will-change: transform,opacity; }
 .product-layer-source { position: absolute; inset: 0; }
-.product-main { z-index: 2; filter: drop-shadow(12px 22px 23px rgba(14,8,13,.24)); }
+.product-main { z-index: 3; }
+.product-rail { z-index: 2; }
 .product-companion { z-index: 1; }
 /* Complementary masks on the same source canvas preserve the exact hero pose. */
-.product-main .product-layer-source { clip-path: polygon(0 0,56% 0,56% 14%,55.25% 15%,55.25% 100%,0 100%); }
+.phone-surface-masks { position: absolute; }
+.product-main .product-layer-source { clip-path: url(#phone-rear-surface); }
+.product-rail .product-layer-source { clip-path: url(#phone-rail-surface); }
 .product-companion .product-layer-source { clip-path: polygon(56% 0,100% 0,100% 100%,55.25% 100%,55.25% 15%,56% 14%); }
 .color-product img { object-fit: contain!important; z-index: 0; opacity: 0; transform: none; transition: opacity 1.02s cubic-bezier(.25,.46,.3,1); will-change: opacity; }
 .color-product img.outgoing { z-index: 1; opacity: 1; }
