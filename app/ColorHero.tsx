@@ -351,7 +351,7 @@ export default function ColorHero() {
                   opacity: modelReady ? 0 : 1,
                 }}>
                   <div className="product-layer-source">
-                    {colors.map((color, index) => ({ color, index })).filter(({ index }) => index === active || index === outgoing).map(({ color, index }) => (
+                    {colors.map((color, index) => ({ color, index })).filter(({ index }) => part === "companion" || !modelReady || index === active || index === outgoing).map(({ color, index }) => (
                       <Image
                         key={color.name}
                         src={color.image}
