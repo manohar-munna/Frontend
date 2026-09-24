@@ -12,7 +12,7 @@
 .opening-curtain.is-opening .curtain-seam { opacity: 0; transition-duration: .16s; }
 .curtain-word { position: absolute; z-index: 2; left: 50%; top: 50%; transform: translate(-50%,-50%); width: clamp(255px,42vw,580px); color: #f2f2f5; transition: opacity .55s ease, transform .7s ease; }
 .curtain-word svg { display: block; width: 100%; height: auto; }
-.curtain-word path { stroke-dasharray: 1 1; stroke-dashoffset: 1; opacity: 0; animation: hello-write 4.1s linear both; }
+.curtain-word .hello-write-path { stroke-dasharray: 1 1; stroke-dashoffset: 1; opacity: 0; animation: hello-write 4.1s linear both; }
 .opening-curtain.is-word-fading .curtain-word { opacity: 0; transform: translate(-50%,-54%); }
 .opening-curtain.is-opening .curtain-left { transform: translateX(-101%); }
 .opening-curtain.is-opening .curtain-right { transform: translateX(101%); }

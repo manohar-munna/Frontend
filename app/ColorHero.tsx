@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import ThreePhone from "./ThreePhone";
+import { helloOutline, helloTrace } from "./hello-lettering-paths";
 
 const colors = [
   { name: "Burgundy", image: "/assets/iphone-burgundy.png", outer: "#672738", stage: "#2c101c", glow: "#8e3951", ink: "#fff4f1" },
@@ -22,8 +23,13 @@ const smoothstep = (progress: number) => progress * progress * (3 - 2 * progress
 
 function HelloLettering() {
   return (
-    <svg viewBox="0 0 286 156" role="img" aria-label="hello" fill="none" stroke="currentColor" strokeWidth="6.8" strokeLinecap="round" strokeLinejoin="round">
-      <path pathLength="1" d="M29 108 C44 100 50 94 53 81 C56 63 57 43 64 43 C72 42 76 47 72 59 C69 72 58 94 51 112 C54 100 62 80 71 80 C80 81 74 99 77 107 C80 117 91 111 98 96 C102 86 108 80 115 81 C126 82 119 96 105 101 C101 102 99 101 98 100 C102 114 112 117 122 112 C137 105 145 85 150 63 C152 54 154 42 161 42 C171 43 166 59 158 78 C150 96 144 110 147 113 C152 119 165 104 172 94 C180 81 184 59 189 46 C192 40 200 42 200 51 C200 66 185 92 181 105 C178 115 188 118 196 109 C202 104 207 95 211 88 C218 79 231 77 237 84 C244 92 240 107 232 112 C222 118 212 111 212 101 C212 90 222 79 232 80 C240 81 240 88 244 89 C250 90 255 83 258 76" />
+    <svg viewBox="0 0 286 156" role="img" aria-label="hello">
+      <defs>
+        <mask id="hello-writing-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="286" height="156">
+          <path className="hello-write-path" pathLength="1" d={helloTrace} fill="none" stroke="white" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" />
+        </mask>
+      </defs>
+      <path d={helloOutline} fill="currentColor" fillRule="evenodd" mask="url(#hello-writing-mask)" />
     </svg>
   );
 }
