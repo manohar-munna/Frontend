@@ -61,7 +61,7 @@
 .product-main .product-layer-source { clip-path: url(#phone-rear-surface); }
 .product-rail .product-layer-source { clip-path: url(#phone-rail-surface); }
 .product-companion .product-layer-source { clip-path: polygon(56% 0,100% 0,100% 100%,55.25% 100%,55.25% 15%,56% 14%); }
-.color-product img { object-fit: contain!important; z-index: 0; opacity: 0; transform: none; transition: opacity 1.02s cubic-bezier(.25,.46,.3,1); will-change: opacity; }
+.color-product img { object-fit: contain!important; z-index: 0; opacity: 0; transform: none; transition: opacity .78s cubic-bezier(.33,0,.67,1); will-change: opacity; }
 .color-product img.outgoing { z-index: 1; opacity: 1; }
 .color-product img.visible { z-index: 2; opacity: 1; }
 .color-product-caption { position: absolute; z-index: 12; left: 50%; top: 65%; translate: -50% 0; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',Arial,sans-serif; font-size: 14px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; animation: color-caption .7s both; }
