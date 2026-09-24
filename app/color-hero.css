@@ -38,7 +38,7 @@
 .color-card.no-transition { transition: none; }
 .is-scrolling .color-card { transition: transform 1.05s cubic-bezier(.2,.72,.22,1),box-shadow .3s ease; }
 .color-card:hover { box-shadow: 0 30px 65px rgba(15,10,14,.34); }
-.color-card img { object-fit: contain!important; padding: 7%; filter: drop-shadow(4px 6px 5px rgba(34,30,31,.14)); }
+.color-card img { object-fit: contain!important; padding: 7%; filter: drop-shadow(3px 6px 4px rgba(28,22,25,.24)) drop-shadow(6px 13px 9px rgba(28,22,25,.15)); }
 .color-card span { position: absolute; left: 0; right: 0; bottom: 9px; text-align: center; font-size: 10px; font-weight: 600; color: #5d4c53; letter-spacing: .07em; text-transform: uppercase; }
 .hero-rock { position: absolute; z-index: 4; left: 5%; bottom: -8%; width: 90%; height: 52%; border-radius: 0; background: none; box-shadow: none; filter: none; opacity: 0; transform: translateY(110%); transition: transform 1.8s cubic-bezier(.18,.67,.19,1),opacity 1.35s ease; pointer-events: none; }
 .hero-rock:after { content: none; }
