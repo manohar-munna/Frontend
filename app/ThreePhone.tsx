@@ -4,14 +4,14 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 
 type FinishName = "Burgundy" | "Pearl" | "Graphite" | "Sage" | "Midnight";
-type Finish = { rear: string; bounds: [number, number, number, number]; frame: string; camera: string; back: string };
+type Finish = { rear: string; bounds: [number, number, number, number]; frame: string; camera: string };
 
 const finishes: Record<FinishName, Finish> = {
-  Burgundy: { rear: "/assets/iphone-rear-burgundy-v2.png", bounds: [207, 129, 816, 1404], frame: "#783245", camera: "#6d293b", back: "#512431" },
-  Pearl: { rear: "/assets/iphone-rear-pearl-v2.png", bounds: [204, 94, 824, 1430], frame: "#c8beb6", camera: "#d6ccc5", back: "#aaa29d" },
-  Graphite: { rear: "/assets/iphone-rear-graphite-v2.png", bounds: [207, 129, 816, 1404], frame: "#50504f", camera: "#464746", back: "#343537" },
-  Sage: { rear: "/assets/iphone-rear-sage-v2.png", bounds: [207, 127, 818, 1406], frame: "#748677", camera: "#67796c", back: "#596a5d" },
-  Midnight: { rear: "/assets/iphone-rear-midnight-v2.png", bounds: [206, 128, 817, 1405], frame: "#304969", camera: "#283f60", back: "#213753" },
+  Burgundy: { rear: "/assets/iphone-rear-burgundy-v2.png", bounds: [207, 129, 816, 1404], frame: "#783245", camera: "#6d293b" },
+  Pearl: { rear: "/assets/iphone-rear-pearl-v2.png", bounds: [204, 94, 824, 1430], frame: "#c8beb6", camera: "#d6ccc5" },
+  Graphite: { rear: "/assets/iphone-rear-graphite-v2.png", bounds: [207, 129, 816, 1404], frame: "#50504f", camera: "#464746" },
+  Sage: { rear: "/assets/iphone-rear-sage-v2.png", bounds: [207, 127, 818, 1406], frame: "#748677", camera: "#67796c" },
+  Midnight: { rear: "/assets/iphone-rear-midnight-v2.png", bounds: [206, 128, 817, 1405], frame: "#304969", camera: "#283f60" },
 };
 
 const names = Object.keys(finishes) as FinishName[];
@@ -169,18 +169,23 @@ function makeShutterMaterial() {
         vec2 p = (vUv - 0.5) * 2.0;
         float r = length(p);
         float a = atan(p.y, p.x);
-        float blade = fract(a * 0.95492966 + r * 0.22 + 0.5 + uOpen * 0.07);
-        float opening = mix(0.11, 0.34, uOpen) + 0.014 * cos(a * 6.0);
-        float pupil = 1.0 - smoothstep(opening - 0.022, opening + 0.025, r);
-        float seam = 1.0 - smoothstep(0.0, 0.017, blade);
-        float bladeLight = 0.009 + 0.005 * cos(a * 6.0 + r * 4.0);
-        vec3 metal = vec3(0.003, 0.0035, 0.0045) + vec3(bladeLight) * smoothstep(opening, opening + 0.12, r);
-        metal += vec3(0.050, 0.048, 0.055) * seam * smoothstep(opening + 0.05, opening + 0.16, r) * (1.0 - smoothstep(0.8, 0.9, r));
-        float innerGlow = exp(-pow((r - opening * 0.72) * 38.0, 2.0));
-        vec3 glass = vec3(0.0006, 0.0007, 0.002) + vec3(0.01, 0.004, 0.022) * innerGlow;
-        glass += vec3(0.042, 0.034, 0.057) * exp(-length((p - vec2(-0.1, 0.1)) * 18.0));
+        float sector = fract((a + 3.14159265) * 0.95492966 + uOpen * 0.045);
+        float curvedSeam = fract(sector + r * 0.28 + 0.024 * sin(r * 5.0));
+        float seam = 1.0 - smoothstep(0.0, 0.012, curvedSeam);
+        float bladeShade = 0.003 + 0.006 * (1.0 - curvedSeam) + 0.002 * cos(a - 0.6);
+        float aperture = mix(0.15, 0.42, uOpen);
+        float hex = cos(mod(a + 3.14159265, 1.04719755) - 0.52359878);
+        float opening = aperture / max(0.87, hex);
+        float pupil = 1.0 - smoothstep(opening - 0.012, opening + 0.012, r);
+        vec3 metal = vec3(0.0018, 0.002, 0.0028) + vec3(bladeShade) * smoothstep(opening, opening + 0.16, r);
+        metal += vec3(0.025, 0.024, 0.030) * seam * smoothstep(opening + 0.025, opening + 0.14, r) * (1.0 - smoothstep(0.82, 0.94, r));
+        metal += vec3(0.008, 0.009, 0.012) * exp(-pow((r - opening - 0.025) * 70.0, 2.0));
+        float pupilReflection = exp(-length((p - vec2(-0.07, 0.09)) * vec2(9.0, 13.0)));
+        float edgeGlow = exp(-pow((r - opening * 0.73) * 32.0, 2.0));
+        vec3 glass = vec3(0.0008, 0.0007, 0.002) + vec3(0.013, 0.008, 0.025) * edgeGlow;
+        glass += vec3(0.042, 0.050, 0.076) * pupilReflection;
         vec3 color = mix(metal, glass, pupil);
-        color += vec3(0.012, 0.01, 0.014) * exp(-pow((r - 0.82) * 36.0, 2.0));
+        color += vec3(0.012, 0.011, 0.015) * exp(-pow((r - 0.84) * 34.0, 2.0));
         float alpha = uReveal * (1.0 - smoothstep(0.93, 0.99, r));
         gl_FragColor = vec4(color, alpha);
         #include <colorspace_fragment>
@@ -203,17 +208,16 @@ function makeOpticalGlass() {
         vec2 p = (vUv - .5) * 2.;
         float r = length(p);
         float angle = atan(p.y, p.x);
-        float bevel = exp(-pow((r - .87) * 30., 2.));
-        float innerRing = exp(-pow((r - .55) * 27., 2.));
-        float iris = exp(-pow((r - .29) * 24., 2.));
-        float blueGlint = exp(-length((p - vec2(-.12,.12)) * vec2(10.,15.)));
-        float violetGlint = exp(-length((p - vec2(.14,-.18)) * vec2(8.,12.)));
-        vec3 color = vec3(.006,.009,.015);
-        color += vec3(.018,.027,.046) * bevel;
-        color += vec3(.008,.012,.022) * innerRing;
-        color += vec3(.012,.022,.040) * iris;
-        color += vec3(.09,.15,.24) * blueGlint + vec3(.065,.028,.10) * violetGlint;
-        color += vec3(.015,.025,.043) * max(0.,sin(angle*2.+.7)) * smoothstep(.35,.75,r);
+        float bevel = exp(-pow((r - .88) * 42., 2.));
+        float pupilHalo = exp(-pow((r - .22) * 13., 2.));
+        float blueGlint = exp(-length((p - vec2(-.08,.07)) * vec2(18.,23.)));
+        float violetGlint = exp(-length((p - vec2(.09,-.11)) * vec2(14.,17.)));
+        float outerReflection = exp(-pow((r - .79) * 19.,2.)) * max(0.,sin(angle + .8));
+        vec3 color = vec3(.001,.0013,.002);
+        color += vec3(.011,.013,.020) * bevel;
+        color += vec3(.002,.003,.006) * pupilHalo;
+        color += vec3(.045,.072,.13) * blueGlint + vec3(.028,.016,.055) * violetGlint;
+        color += vec3(.014,.018,.027) * outerReflection;
         gl_FragColor = vec4(color, uReveal * (1. - smoothstep(.965,1.,r)));
         #include <colorspace_fragment>
       }
@@ -224,6 +228,55 @@ function makeOpticalGlass() {
   });
 }
 
+function makeFlashGlass() {
+  return new THREE.ShaderMaterial({
+    uniforms: { uReveal: { value: 0 } },
+    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `
+      uniform float uReveal;
+      varying vec2 vUv;
+      void main() {
+        vec2 p = (vUv - .5) * 2.;
+        float r = length(p);
+        float grooves = .026 * sin(r * 78.) * smoothstep(.13,.45,r);
+        float pearl = .48 + .21 * (1. - r) + grooves;
+        float highlight = .22 * exp(-length((p - vec2(-.24,.29)) * vec2(4.,6.)));
+        float center = .13 * exp(-pow(r * 4.5,2.));
+        vec3 color = vec3(pearl * .96,pearl * .97,pearl) + vec3(highlight + center);
+        color *= 1. - .22 * smoothstep(.78,.99,r);
+        gl_FragColor = vec4(color, uReveal * (1. - smoothstep(.96,1.,r)));
+        #include <colorspace_fragment>
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+    toneMapped: false,
+  });
+}
+
+function makeMicroGrain() {
+  const side = 128;
+  const pixels = new Uint8Array(side * side * 4);
+  let seed = 74239;
+  for (let index = 0; index < side * side; index++) {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    const value = 108 + ((seed >>> 24) % 40);
+    pixels[index * 4] = value;
+    pixels[index * 4 + 1] = value;
+    pixels[index * 4 + 2] = value;
+    pixels[index * 4 + 3] = 255;
+  }
+  const grain = new THREE.DataTexture(pixels, side, side, THREE.RGBAFormat);
+  grain.wrapS = grain.wrapT = THREE.RepeatWrapping;
+  grain.repeat.set(0.012, 0.012);
+  grain.magFilter = THREE.LinearFilter;
+  grain.minFilter = THREE.LinearMipmapLinearFilter;
+  grain.generateMipmaps = true;
+  grain.needsUpdate = true;
+  return grain;
+}
+
 type ModelState = {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
@@ -231,9 +284,10 @@ type ModelState = {
   phone: THREE.Group;
   frame: THREE.MeshPhysicalMaterial;
   cameraMetal: THREE.MeshPhysicalMaterial;
-  backSurface: THREE.MeshPhysicalMaterial;
   detailMaterials: THREE.Material[];
   opticalGlass: THREE.ShaderMaterial;
+  flashGlass: THREE.ShaderMaterial;
+  grain: THREE.Texture;
   shutter: THREE.ShaderMaterial;
   shutterRings: THREE.MeshPhysicalMaterial[];
   photos: Photos;
@@ -263,12 +317,12 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
   state.camera.zoom = THREE.MathUtils.lerp(1, compact ? 2.15 : 3.15, close);
   state.camera.updateProjectionMatrix();
   const detailReveal = THREE.MathUtils.smoothstep(shutterPhase, 0.08, 0.56);
-  state.backSurface.opacity = detailReveal;
   for (const material of state.detailMaterials) {
     if (material instanceof THREE.MeshPhysicalMaterial || material instanceof THREE.MeshBasicMaterial) material.opacity = detailReveal;
   }
   state.opticalGlass.uniforms.uReveal.value = detailReveal;
-  const reveal = THREE.MathUtils.smoothstep(shutterPhase, 0.5, 0.82);
+  state.flashGlass.uniforms.uReveal.value = detailReveal;
+  const reveal = THREE.MathUtils.smoothstep(shutterPhase, 0.35, 0.9);
   state.shutter.uniforms.uReveal.value = reveal;
   state.shutter.uniforms.uOpen.value = THREE.MathUtils.clamp((shutterPhase - 0.57) / 0.43, 0, 1);
   for (const ring of state.shutterRings) ring.opacity = reveal;
@@ -344,7 +398,6 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       scene.add(phone);
       const frame = new THREE.MeshPhysicalMaterial({ color: finishes[initial].frame, metalness: 0.66, roughness: 0.25, clearcoat: 0.7 });
       const cameraMetal = new THREE.MeshPhysicalMaterial({ color: finishes[initial].camera, metalness: 0.52, roughness: 0.3, clearcoat: 0.7 });
-      const backSurface = new THREE.MeshPhysicalMaterial({ color: finishes[initial].back, metalness: 0.18, roughness: 0.41, clearcoat: 0.26, transparent: true, opacity: 0, depthWrite: false });
       const detailMaterials: THREE.Material[] = [];
       const detail = (color: THREE.ColorRepresentation, metalness: number, roughness: number) => {
         const material = new THREE.MeshPhysicalMaterial({ color, metalness, roughness, clearcoat: 0.75, transparent: true, opacity: 0, depthWrite: false });
@@ -371,21 +424,21 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       // Its sides stay attached while the textured rear and front rotate.
       add(sideUvs(roundedPrism(W, H, D, R, 3)), [frame, sidePhoto]);
       add(faceUvs(new THREE.ShapeGeometry(roundedShape(W - 3, H - 3, R - 2), 24)), rearPhoto, 0, 0, D / 2 + 1.8);
-      // The hero uses a calibrated photograph. At macro distance a continuous
-      // modeled finish takes over, so its edges and camera face stay sharp.
-      add(new THREE.ShapeGeometry(roundedShape(W - 3, H - 3, R - 2), 32), backSurface, 0, 0, D / 2 + 2.1);
-
-      // A real raised camera deck and separate barrels use the same calibrated
-      // photograph, so lens rings do not change appearance at the handoff.
+      // Keep the calibrated rear finish through the entire move. The deck and
+      // barrels have matching photo faces, then reveal finer macro detail.
       const deckX = -100;
       const deckY = 397;
       add(roundedPrism(282, 292, 14, 53, 2), cameraMetal, deckX, deckY, D / 2 + 7);
       add(faceUvs(new THREE.ShapeGeometry(roundedShape(279, 289, 51), 16), deckX, deckY), rearPhoto, deckX, deckY, D / 2 + 16.5);
       const deckFinish = detail(finishes[initial].camera, 0.46, 0.3);
+      const grain = makeMicroGrain();
+      deckFinish.bumpMap = grain;
+      deckFinish.bumpScale = 0.42;
+      deckFinish.needsUpdate = true;
       add(new THREE.ShapeGeometry(roundedShape(276, 286, 50), 32), deckFinish, deckX, deckY, D / 2 + 16.85);
       const barrelBlack = detail(0x080a0d, 0.44, 0.24);
-      const polishedEdge = detail(0x949aa2, 0.84, 0.19);
-      const innerEdge = detail(0x252b32, 0.7, 0.23);
+      const polishedEdge = detail(finishes[initial].frame, 0.78, 0.21);
+      const innerEdge = detail(0x171a20, 0.67, 0.2);
       const opticalGlass = makeOpticalGlass();
       detailMaterials.push(opticalGlass);
       const lenses = [
@@ -399,17 +452,29 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
         add(faceUvs(new THREE.CircleGeometry(58.5, 96), x, y), rearPhoto, x, y, D / 2 + 35);
         add(new THREE.CircleGeometry(55, 128), barrelBlack, x, y, D / 2 + 35.6);
         add(new THREE.TorusGeometry(55.5, 2.5, 16, 128), polishedEdge, x, y, D / 2 + 36.4);
-        add(new THREE.TorusGeometry(47.5, 1.35, 12, 128), innerEdge, x, y, D / 2 + 37.1);
+        add(new THREE.TorusGeometry(48.8, 1.25, 12, 128), innerEdge, x, y, D / 2 + 37.1);
         add(new THREE.CircleGeometry(45.5, 128), opticalGlass, x, y, D / 2 + 37.4);
       }
 
       const flashRing = detail(0xa6a5a4, 0.75, 0.21);
-      const flashGlass = detail(0xe9e5da, 0.02, 0.11);
+      const flashGlass = makeFlashGlass();
+      detailMaterials.push(flashGlass);
       const sensorRing = detail(0x34373a, 0.52, 0.27);
-      add(new THREE.TorusGeometry(17.5, 2, 12, 96), flashRing, -40, 469, D / 2 + 18.2);
-      add(new THREE.CircleGeometry(15.5, 96), flashGlass, -40, 469, D / 2 + 18.5);
-      add(new THREE.TorusGeometry(18, 1.5, 12, 96), sensorRing, -40, 324, D / 2 + 18.2);
-      add(new THREE.CircleGeometry(16, 96), barrelBlack, -40, 324, D / 2 + 18.5);
+      const microphoneRing = detail(0x9a6a75, 0.58, 0.3);
+      for (const surface of [flashRing, flashGlass, sensorRing, microphoneRing]) surface.depthTest = false;
+      const addDeckDetail = (geometry: THREE.BufferGeometry, material: THREE.Material, x: number, y: number, z: number) => {
+        const mesh = add(geometry, material, x, y, z);
+        mesh.renderOrder = 10;
+        return mesh;
+      };
+      // These positions are measured against the calibrated photograph. The
+      // macro details land exactly over its flash and depth sensor.
+      addDeckDetail(new THREE.TorusGeometry(22, 2, 12, 96), flashRing, -35, 491, D / 2 + 22.5);
+      addDeckDetail(new THREE.CircleGeometry(20, 96), flashGlass, -35, 491, D / 2 + 23);
+      addDeckDetail(new THREE.TorusGeometry(22, 1.5, 12, 96), sensorRing, -36, 292, D / 2 + 22.5);
+      addDeckDetail(new THREE.CircleGeometry(20, 96), barrelBlack, -36, 292, D / 2 + 23);
+      addDeckDetail(new THREE.TorusGeometry(4.1, 0.8, 8, 48), microphoneRing, 7, 319, D / 2 + 22.5);
+      addDeckDetail(new THREE.CircleGeometry(3.3, 48), barrelBlack, 7, 319, D / 2 + 23);
 
       // The main camera uses a six-blade variable aperture. Keep the close-up
       // attached to its actual lens instead of moving dozens of glass meshes.
@@ -421,9 +486,6 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       ];
       add(new THREE.TorusGeometry(53, 3, 16, 128), shutterRings[0], -170, 465, D / 2 + 39.2);
       add(new THREE.TorusGeometry(46, 1.25, 12, 128), shutterRings[1], -170, 465, D / 2 + 40);
-
-      // The reference deck already has a precisely aligned flash and dark
-      // sensor. Extra disks doubled their outlines and overlapped the photo.
 
       const frontGlass = add(faceUvs(new THREE.ShapeGeometry(roundedShape(W - 10, H - 10, R - 7), 24)), frontPhoto, 0, 0, -D / 2 - 2);
       frontGlass.rotation.y = Math.PI;
@@ -450,7 +512,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
         });
       };
       state = {
-        renderer, scene, camera, phone, frame, cameraMetal, backSurface, detailMaterials, opticalGlass, shutter, shutterRings, photos, materials, current: initial, animation: 0, disposed: false, render,
+        renderer, scene, camera, phone, frame, cameraMetal, detailMaterials, opticalGlass, flashGlass, grain, shutter, shutterRings, photos, materials, current: initial, animation: 0, disposed: false, render,
         select(name) {
           if (name === this.current) return;
           if (this.animation) cancelAnimationFrame(this.animation);
@@ -470,8 +532,6 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
           const frameTo = new THREE.Color(finishes[name].frame);
           const deckFrom = new THREE.Color(finishes[from].camera);
           const deckTo = new THREE.Color(finishes[name].camera);
-          const backFrom = new THREE.Color(finishes[from].back);
-          const backTo = new THREE.Color(finishes[name].back);
           const started = performance.now();
           const tick = (now: number) => {
             if (this.disposed) return;
@@ -480,8 +540,8 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
             for (const { material } of this.materials) material.uniforms.uBlend.value = eased;
             frame.color.lerpColors(frameFrom, frameTo, eased);
             cameraMetal.color.lerpColors(deckFrom, deckTo, eased);
+            polishedEdge.color.lerpColors(frameFrom, frameTo, eased);
             deckFinish.color.lerpColors(deckFrom, deckTo, eased);
-            backSurface.color.lerpColors(backFrom, backTo, eased);
             render();
             this.animation = p < 1 ? requestAnimationFrame(tick) : 0;
           };
@@ -521,8 +581,8 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
         for (const { material } of state.materials) material.dispose();
         state.frame.dispose();
         state.cameraMetal.dispose();
-        state.backSurface.dispose();
         for (const material of state.detailMaterials) material.dispose();
+        state.grain.dispose();
         state.shutter.dispose();
         for (const ring of state.shutterRings) ring.dispose();
         for (const texture of [...Object.values(state.photos.rear), state.photos.side, state.photos.front]) texture.dispose();
