@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import ThreePhone from "./ThreePhone";
+import { helloOutline } from "./hello-outline";
 
 const colors = [
   { name: "Burgundy", image: "/assets/iphone-burgundy.png", outer: "#672738", stage: "#2c101c", glow: "#8e3951", ink: "#fff4f1" },
@@ -24,15 +25,12 @@ function HelloLettering() {
   return (
     <svg viewBox="0 0 286 156" role="img" aria-label="hello">
       <defs>
-        <filter id="hello-isolate" colorInterpolationFilters="sRGB">
-          <feColorMatrix type="matrix" values="0 0 0 0 .95  0 0 0 0 .95  0 0 0 0 .97  .385 .385 .385 0 -.087" />
-        </filter>
         <mask id="hello-ink-reveal" maskUnits="userSpaceOnUse" x="0" y="0" width="286" height="156">
-          <path className="hello-reveal-path" pathLength="1" fill="none" stroke="white" strokeWidth="26" strokeLinecap="round" strokeLinejoin="round" d="M29 108 C40 102 48 95 53 81 C58 66 56 44 64 43 C76 40 76 55 65 78 C59 91 51 108 50 112 C54 101 61 78 71 79 C84 80 70 108 81 112 C91 117 97 99 103 89 C111 77 120 75 121 84 C122 94 111 102 99 101 C104 118 121 116 135 98 C145 82 149 55 153 46 C157 37 165 40 166 50 C168 67 144 107 148 112 C155 119 167 105 173 94 C182 78 185 56 190 46 C195 37 202 40 202 50 C204 67 182 107 186 112 C192 120 204 105 212 93 C220 80 231 77 237 84 C245 92 242 107 232 112 C223 118 210 111 212 99 C213 88 225 78 235 84 C242 89 239 96 244 97 C250 98 255 88 258 77" />
+          <path className="hello-reveal-path" pathLength="1" fill="none" stroke="white" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" d="M29 108 C40 102 48 95 53 81 C58 66 56 44 64 43 C76 40 76 55 65 78 C59 91 51 108 50 112 C54 101 61 78 71 79 C84 80 70 108 81 112 C91 117 97 99 103 89 C111 77 120 75 121 84 C122 94 111 102 99 101 C104 118 121 116 135 98 C145 82 149 55 153 46 C157 37 165 40 166 50 C168 67 144 107 148 112 C155 119 167 105 173 94 C182 78 185 56 190 46 C195 37 202 40 202 50 C204 67 182 107 186 112 C192 120 204 105 212 93 C220 80 231 77 237 84 C245 92 242 107 232 112 C223 118 210 111 212 99 C213 88 225 78 235 84 C242 89 239 96 244 97 C250 98 255 88 258 77" />
         </mask>
       </defs>
-      <image className="hello-drawn" href="/assets/hello-script-reference.png" width="286" height="156" filter="url(#hello-isolate)" mask="url(#hello-ink-reveal)" />
-      <image className="hello-final" href="/assets/hello-script-reference.png" width="286" height="156" filter="url(#hello-isolate)" />
+      <path className="hello-drawn" d={helloOutline} fill="currentColor" fillRule="evenodd" mask="url(#hello-ink-reveal)" />
+      <path className="hello-final" d={helloOutline} fill="currentColor" fillRule="evenodd" />
     </svg>
   );
 }

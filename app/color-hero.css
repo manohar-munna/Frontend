@@ -10,10 +10,9 @@
 .curtain-seam { position: absolute; z-index: 1; top: 0; bottom: 0; left: 50%; width: 1px; background: rgba(255,226,230,.32); opacity: 0; transform: translateX(-50%); transition: opacity .35s ease; }
 .opening-curtain.has-seam .curtain-seam { opacity: 1; }
 .opening-curtain.is-opening .curtain-seam { opacity: 0; transition-duration: .16s; }
-.curtain-word { position: absolute; z-index: 2; left: 50%; top: 50%; transform: translate(-50%,-50%); width: clamp(255px,42vw,580px); transition: opacity .55s ease, transform .7s ease; }
+.curtain-word { position: absolute; z-index: 2; left: 50%; top: 50%; transform: translate(-50%,-50%); width: clamp(255px,42vw,580px); color: #f2f2f5; transition: opacity .55s ease, transform .7s ease; }
 .curtain-word svg { display: block; width: 100%; height: auto; }
 .curtain-word .hello-reveal-path { stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: hello-write 4.1s linear both; }
-.curtain-word .hello-drawn { clip-path: inset(0 100% 0 0); animation: hello-sweep 4.1s linear both; }
 .curtain-word .hello-final { opacity: 0; animation: hello-complete .55s ease 3.7s forwards; }
 .opening-curtain.is-word-fading .curtain-word { opacity: 0; transform: translate(-50%,-54%); }
 .opening-curtain.is-opening .curtain-left { transform: translateX(-101%); }
@@ -82,7 +81,6 @@
 .design-placeholder { position: absolute; z-index: 1; top: 13%; right: 5%; width: 45%; height: 76%; padding: 23px 27px; display: flex; align-items: flex-end; justify-content: space-between; border: 1px solid color-mix(in srgb,var(--hero-ink) 28%,transparent); border-radius: 35px; box-shadow: inset 0 0 80px rgba(205,108,136,.04),0 24px 100px rgba(8,1,5,.15); font-size: 10px; font-weight: 600; letter-spacing: .2em; }
 
 @keyframes hello-write { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-@keyframes hello-sweep { to { clip-path: inset(0 0 0 0); } }
 @keyframes hello-complete { to { opacity: 1; } }
 @keyframes hero-ripple { from { transform: translate(-50%,-50%) scale(.005); } to { transform: translate(-50%,-50%) scale(2.25); } }
 @keyframes color-caption { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
