@@ -30,6 +30,7 @@ function WelcomeLettering() {
 export default function ColorHero() {
   const heroRef = useRef<HTMLElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const productRef = useRef<HTMLDivElement>(null);
   const positionRef = useRef(START);
   const activeRef = useRef(0);
   const rippleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -42,6 +43,7 @@ export default function ColorHero() {
   const [resetting, setResetting] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [panelSize, setPanelSize] = useState({ width: 1100, height: 700 });
+  const [productSize, setProductSize] = useState({ width: 560, height: 504 });
   const [wordFading, setWordFading] = useState(false);
   const [showSeam, setShowSeam] = useState(false);
   const [curtainOpening, setCurtainOpening] = useState(false);
@@ -131,10 +133,15 @@ export default function ColorHero() {
   useEffect(() => {
     const panel = panelRef.current;
     if (!panel) return;
-    const measure = () => setPanelSize({ width: panel.clientWidth, height: panel.clientHeight });
+    const measure = () => {
+      setPanelSize({ width: panel.clientWidth, height: panel.clientHeight });
+      const product = productRef.current;
+      if (product) setProductSize({ width: product.clientWidth, height: product.clientHeight });
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(panel);
+    if (productRef.current) observer.observe(productRef.current);
     return () => observer.disconnect();
   }, []);
 
@@ -203,20 +210,28 @@ export default function ColorHero() {
   const reveal = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.06) / 0.34)));
   const motion = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.13) / 0.74)));
   const storyOpacity = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.2) / 0.28)));
-  const pairOpacity = 1 - smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.22) / 0.16)));
+  const companionExit = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.045) / 0.34)));
   const railOpacity = 1 - smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.01) / 0.1)));
-  const shift = panelSize.width * (panelSize.width < 670 ? 0.03 : 0.225) * motion;
-  const phoneShift = shift - panelSize.width * 0.05 * (1 - motion);
-  const phoneTop = mix(panelSize.width < 670 ? 40 : 41, panelSize.width < 670 ? 65 : 49, motion);
-  const phoneHeight = mix(panelSize.width < 670 ? 55 : 66, panelSize.width < 670 ? 37 : 66, motion);
+  const mobile = panelSize.width < 670;
+  // Both layers share the original image's contained canvas, including its
+  // transparent margins. There is no second render to align or crossfade in.
+  const assetScale = Math.min(productSize.width / 1200, productSize.height / 1310);
+  const artWidth = 1200 * assetScale;
+  const artHeight = 1310 * assetScale;
+  const endScale = panelSize.height * (mobile ? 0.37 : 0.66) / (artHeight * 0.915);
+  const productScale = mix(1, endScale, motion);
+  const shift = panelSize.width * (mobile ? 0.03 : 0.225) * motion
+    + artWidth * 0.15 * (productScale - 1 + motion);
+  const phoneTop = mix(mobile ? 40 : 41, mobile ? 65 : 49, motion);
+  const turn = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.3) / 0.57)));
   useEffect(() => {
     document.documentElement.style.setProperty("--header-ink", theme.ink);
   }, [theme.ink]);
   const themeStyle = {
     "--hero-outer": base.outer,
     "--hero-stage": base.stage,
-    "--hero-border-stage": `color-mix(in srgb, ${theme.stage}, ${colors[0].stage} ${storyOpacity * 100}%)`,
-    "--hero-border-outer": `color-mix(in srgb, ${theme.outer}, ${colors[0].outer} ${storyOpacity * 100}%)`,
+    "--hero-border-stage": theme.stage,
+    "--hero-border-outer": theme.outer,
     "--hero-glow": theme.glow,
     "--hero-ink": theme.ink,
   } as CSSProperties;
@@ -286,18 +301,32 @@ export default function ColorHero() {
           </div>
 
           <div className="hero-rock" aria-hidden="true" style={sceneReady ? { opacity: 1 - reveal } : undefined}><Image src="/assets/moss-rock.png" alt="" fill priority sizes="(max-width: 700px) 100vw, 85vw" /></div>
-          <div className="color-product" aria-live="polite" style={sceneReady ? { opacity: pairOpacity, transform: `translate(calc(-50% + ${Number(shift.toFixed(2))}px), -50%) scale(${Number((1 - motion * 0.17).toFixed(4))})` } : undefined}>
-            {colors.map((color, index) => (
-              <Image
-                key={color.name}
-                src={color.image}
-                alt={index === active ? `${color.name} iPhone 18 Pro concept pair` : ""}
-                fill
-                priority={index === 0}
-                sizes="(max-width: 700px) 85vw, 43vw"
-                className={index === active ? "visible" : index === outgoing ? "outgoing" : ""}
-              />
-            ))}
+          <div ref={productRef} className="color-product" role="img" aria-label={`${theme.name} iPhone 18 Pro concept`} style={sceneReady ? { top: `${phoneTop}%`, transform: `translate(calc(-50% + ${shift}px), -50%) scale(${productScale})` } : undefined}>
+            <div className="product-artboard" style={{ width: artWidth, height: artHeight }}>
+              {(["companion", "main"] as const).map((part) => (
+                <div key={part} className={`product-layer product-${part}`} style={part === "companion" ? {
+                  opacity: 1 - companionExit,
+                  transform: `translate3d(${-artWidth * 0.3 * companionExit}px, ${artHeight * 0.015 * companionExit}px, 0)`,
+                } : {
+                  transform: `rotateY(${turn * 18}deg) rotateZ(${-turn * 3}deg)`,
+                }}>
+                  <div className="product-layer-source">
+                    {colors.map((color, index) => (
+                      <Image
+                        key={color.name}
+                        src={color.image}
+                        alt=""
+                        fill
+                        priority={index === 0}
+                        sizes="(max-width: 700px) 85vw, 43vw"
+                        style={part === "companion" && (index === 1 || index === 2) ? { filter: "saturate(0)" } : undefined}
+                        className={index === active ? "visible" : index === outgoing ? "outgoing" : ""}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
           {entranceDone && <div className="color-product-caption" key={theme.name} style={{ opacity: 1 - reveal, animation: reveal > 0 ? "none" : undefined }}>{theme.name}</div>}
           <div className="color-heading" style={{ opacity: 1 - reveal }}><h1>Choose your perspective.</h1></div>
@@ -311,16 +340,7 @@ export default function ColorHero() {
               <span className="scroll-rule" />
             </div>
             <div className="design-placeholder" style={{ opacity: smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.34) / 0.4))) }}>
-              <span>BURGUNDY</span><span>18 / PRO</span>
-            </div>
-            <div className="scroll-phone-position" style={{ top: `${phoneTop}%`, height: `${phoneHeight}%`, transform: `translate3d(calc(-50% + ${Number(phoneShift.toFixed(2))}px), -50%, 0)`, opacity: smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.11) / 0.05))) }}>
-              <div className="scroll-phone-object" role="img" aria-label="Burgundy iPhone rear rotating into its display" style={{ transform: `rotateY(${Number((144 + motion * 58).toFixed(2))}deg) rotateZ(${Number((motion * 4).toFixed(2))}deg)` }}>
-                <div className="scroll-phone-core" />
-                <div className="scroll-phone-edge scroll-phone-edge-left" />
-                <div className="scroll-phone-edge scroll-phone-edge-right" />
-                <div className="scroll-phone-face scroll-phone-front"><Image src="/assets/iphone-burgundy-front-3d.png" alt="" fill priority sizes="(max-width: 700px) 60vw, 30vw" /></div>
-                <div className="scroll-phone-face scroll-phone-back"><Image src="/assets/iphone-burgundy-back-3d.png" alt="" fill priority sizes="(max-width: 700px) 60vw, 30vw" /></div>
-              </div>
+              <span>{theme.name.toUpperCase()}</span><span>18 / PRO</span>
             </div>
           </div>
         </div>
