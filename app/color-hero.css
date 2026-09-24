@@ -71,6 +71,9 @@
 .scroll-scene { position: absolute; z-index: 10; inset: 0; overflow: hidden; pointer-events: none; color: var(--hero-ink); }
 .scroll-scene-backdrop { position: absolute; inset: 0; background: radial-gradient(ellipse at 72% 43%,color-mix(in srgb,var(--hero-border-stage),var(--hero-glow) 28%) 0,var(--hero-border-stage) 54%,color-mix(in srgb,var(--hero-border-stage),#000 22%) 100%); }
 .scroll-scene-glow { position: absolute; width: 55%; aspect-ratio: 1; right: 2%; top: 7%; border-radius: 50%; background: radial-gradient(circle,color-mix(in srgb,var(--hero-glow) 28%,transparent),transparent 70%); }
+.shutter-backdrop { position: absolute; inset: 0; background: radial-gradient(ellipse at 47% 48%,#21131b 0%,#100d13 57%,#07070a 100%); }
+.shutter-copy { position: absolute; z-index: 13; top: 5.5%; left: 12%; width: 76%; color: #f7f4f7; text-align: center; pointer-events: none; }
+.shutter-copy h2 { font-family: -apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',Arial,sans-serif; font-size: clamp(21px,2.25vw,38px); line-height: 1.14; font-weight: 650; letter-spacing: -.035em; text-wrap: balance; }
 .scroll-copy { position: absolute; z-index: 3; left: 7.5%; top: 26%; width: 42%; will-change: transform,opacity; }
 .scroll-kicker { margin-bottom: 28px; font-size: 11px; font-weight: 650; letter-spacing: .24em; }
 .scroll-copy h2 { font-family: Georgia,"Times New Roman",serif; font-size: clamp(58px,6.1vw,104px); font-weight: 400; letter-spacing: -.075em; line-height: .99; }
@@ -91,6 +94,7 @@
   .color-product-caption { top: 65%; font-size: 11px; }
   .color-heading { bottom: 6%; padding: 0 15px; }.color-heading h1 { font-size: clamp(36px,9vw,56px); }
   .scroll-copy { left: 8%; top: 14%; width: 84%; }.scroll-kicker { margin-bottom: 16px; font-size: 9px; }.scroll-copy h2 { font-size: clamp(45px,11vw,64px); }.scroll-description { margin-top: 17px; max-width: 290px; font-size: 12px; }.scroll-rule { margin-top: 18px; }
+  .shutter-copy { top: 7%; left: 7%; width: 86%; }.shutter-copy h2 { font-size: clamp(19px,5.4vw,27px); }
   .design-placeholder { left: 8%; right: 8%; top: 43%; width: 84%; height: 48%; padding: 15px; border-radius: 21px; font-size: 8px; }
 }
 @media(max-width:420px) { .color-product { width: 84vw; }.color-card { width: 88px; height: 88px; }.color-heading h1 { font-size: 35px; }.hero-rock { width: 170%; left: -35%; } }

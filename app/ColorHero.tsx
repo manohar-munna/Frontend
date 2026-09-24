@@ -241,7 +241,7 @@ export default function ColorHero() {
   const base = colors[baseIndex];
   const phaseOne = clamp01(scrollProgress / 0.54);
   const lensPhase = smoothstep(clamp01((scrollProgress - 0.54) / 0.18));
-  const explosion = clamp01((scrollProgress - 0.75) / 0.23);
+  const shutterPhase = smoothstep(clamp01((scrollProgress - 0.75) / 0.23));
   const lensReveal = smoothstep(clamp01((lensPhase - 0.05) / 0.28));
   const reveal = smoothstep(clamp01((phaseOne - 0.06) / 0.34));
   const motion = smoothstep(clamp01((phaseOne - 0.13) / 0.74));
@@ -374,8 +374,8 @@ export default function ColorHero() {
                   </div>
                 </div>
               ))}
-              <div className="three-phone-layer" style={{ opacity: modelReady ? 1 : 0, width: `${100 + 100 * lensPhase}%`, left: `${-50 * lensPhase}%` }}>
-                <ThreePhone color={theme.name} turn={turn} lensPhase={lensPhase} explosion={explosion} compact={mobile} onReady={handleModelReady} />
+              <div className="three-phone-layer" style={{ opacity: modelReady ? 1 : 0, width: "300%", left: "-100%" }}>
+                <ThreePhone color={theme.name} turn={turn} lensPhase={lensPhase} shutterPhase={shutterPhase} compact={mobile} onReady={handleModelReady} />
               </div>
             </div>
           </div>
@@ -384,6 +384,7 @@ export default function ColorHero() {
           <div className="scroll-scene" aria-hidden={storyOpacity < 0.75}>
             <div className="scroll-scene-backdrop" style={{ opacity: storyOpacity }} />
             <div className="scroll-scene-glow" style={{ opacity: storyOpacity }} />
+            <div className="shutter-backdrop" style={{ opacity: smoothstep(clamp01((shutterPhase - 0.28) / 0.55)) }} />
             <div className="scroll-copy" style={{ opacity: smoothstep(clamp01((phaseOne - 0.4) / 0.35)) * (1 - lensReveal), transform: `translateY(${Number(((1 - motion) * 42).toFixed(2))}px)` }}>
               <p className="scroll-kicker">01 / THE FORM</p>
               <h2>Every angle,<br /><em>considered.</em></h2>
@@ -393,6 +394,9 @@ export default function ColorHero() {
             <div className="design-placeholder" style={{ opacity: smoothstep(clamp01((phaseOne - 0.34) / 0.4)) * (1 - lensReveal) }}>
               <span>{theme.name.toUpperCase()}</span><span>18 / PRO</span>
             </div>
+          </div>
+          <div className="shutter-copy" style={{ opacity: smoothstep(clamp01((shutterPhase - 0.68) / 0.27)) }}>
+            <h2>48MP Fusion Main camera.<br />Aperture that adapts to the light.</h2>
           </div>
         </div>
         </div>
