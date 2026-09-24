@@ -43,8 +43,8 @@ function roundedPrism(width: number, height: number, depth: number, radius: numb
     bevelEnabled: true,
     bevelThickness: bevel,
     bevelSize: bevel,
-    bevelSegments: 5,
-    curveSegments: 24,
+    bevelSegments: 3,
+    curveSegments: 14,
     steps: 1,
   });
   geometry.translate(0, 0, -depth / 2 + bevel);
@@ -112,9 +112,17 @@ const photoFragment = `
   }
 
   void main() {
-    vec3 from = sampleImage(uFrom, uBoundsFrom, uTintFrom);
-    vec3 to = sampleImage(uTo, uBoundsTo, uTintTo);
-    gl_FragColor = vec4(mix(from, to, uBlend), 1.0);
+    vec3 color;
+    if (uBlend <= 0.001) {
+      color = sampleImage(uFrom, uBoundsFrom, uTintFrom);
+    } else if (uBlend >= 0.999) {
+      color = sampleImage(uTo, uBoundsTo, uTintTo);
+    } else {
+      vec3 from = sampleImage(uFrom, uBoundsFrom, uTintFrom);
+      vec3 to = sampleImage(uTo, uBoundsTo, uTintTo);
+      color = mix(from, to, uBlend);
+    }
+    gl_FragColor = vec4(color, 1.0);
     #include <colorspace_fragment>
   }
 `;
@@ -139,7 +147,7 @@ function makePhoto(kind: PhotoKind, photos: Photos, initial: FinishName) {
       uTinted: { value: kind === "rear" ? 0 : 1 },
       uBlend: { value: 1 },
     },
-    side: THREE.DoubleSide,
+    side: THREE.FrontSide,
     toneMapped: false,
   });
 }
@@ -182,13 +190,20 @@ export default function ThreePhone({ color, turn, onReady }: { color: string; tu
       onReady?.(false);
       return;
     }
-    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+    // The phone occupies only part of the stage. A full 2x canvas adds four
+    // times the fragment work without improving this on-screen size.
+    const gl = renderer.getContext();
+    const debugRenderer = gl.getExtension("WEBGL_debug_renderer_info");
+    const rendererName = String(gl.getParameter(debugRenderer?.UNMASKED_RENDERER_WEBGL || gl.RENDERER));
+    const softwareRenderer = /swiftshader|llvmpipe|software/i.test(rendererName);
+    renderer.setPixelRatio(softwareRenderer ? 1 : Math.min(devicePixelRatio || 1, 1.25));
     renderer.setClearColor(0, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.NoToneMapping;
     mount.appendChild(renderer.domElement);
 
     let cancelled = false;
+    let renderFrame = 0;
     let state: ModelState | null = null;
     const loader = new THREE.TextureLoader();
     const sources = [...names.map((name) => finishes[name].rear), "/assets/iphone-side-burgundy-v3.png", "/assets/iphone-front-burgundy-v3.png"];
@@ -209,7 +224,9 @@ export default function ThreePhone({ color, turn, onReady }: { color: string; tu
       const photos: Photos = { rear, side: loaded[5], front: loaded[6] };
       const initial = (latest.current.color in finishes ? latest.current.color : "Burgundy") as FinishName;
       const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(28.3, 1200 / 1310, 1, 5000);
+      // A tight depth range keeps the raised camera faces from competing for
+      // the same depth-buffer values as the deck and rear glass.
+      const camera = new THREE.PerspectiveCamera(28.3, 1200 / 1310, 100, 3200);
       camera.position.set(0, 0, 2600);
       camera.setViewOffset(1200, 1310, 180, 0, 1200, 1310);
       camera.lookAt(0, 0, 0);
@@ -251,22 +268,20 @@ export default function ThreePhone({ color, turn, onReady }: { color: string; tu
       const deckX = -100;
       const deckY = 397;
       add(roundedPrism(282, 292, 14, 53, 2), cameraMetal, deckX, deckY, D / 2 + 7);
-      add(faceUvs(new THREE.ShapeGeometry(roundedShape(279, 289, 51), 24), deckX, deckY), rearPhoto, deckX, deckY, D / 2 + 15);
+      add(faceUvs(new THREE.ShapeGeometry(roundedShape(279, 289, 51), 16), deckX, deckY), rearPhoto, deckX, deckY, D / 2 + 16.5);
       const lenses = [
         [-170, 465],
         [-40, 396],
         [-170, 324],
       ] as const;
       for (const [x, y] of lenses) {
-        const barrel = add(new THREE.CylinderGeometry(60, 61, 15, 72), frame, x, y, D / 2 + 23);
+        const barrel = add(new THREE.CylinderGeometry(60, 61, 15, 48), frame, x, y, D / 2 + 25);
         barrel.rotation.x = Math.PI / 2;
-        add(faceUvs(new THREE.CircleGeometry(58.5, 72), x, y), rearPhoto, x, y, D / 2 + 31);
+        add(faceUvs(new THREE.CircleGeometry(58.5, 48), x, y), rearPhoto, x, y, D / 2 + 35);
       }
-      for (const [x, y, radius] of [[-39, 493, 16], [-42, 318, 24]] as const) {
-        const hardware = add(new THREE.CylinderGeometry(radius, radius, 3, 48), cameraMetal, x, y, D / 2 + 17);
-        hardware.rotation.x = Math.PI / 2;
-        add(faceUvs(new THREE.CircleGeometry(radius - 1, 48), x, y), rearPhoto, x, y, D / 2 + 19);
-      }
+
+      // The reference deck already has a precisely aligned flash and dark
+      // sensor. Extra disks doubled their outlines and overlapped the photo.
 
       const frontGlass = add(faceUvs(new THREE.ShapeGeometry(roundedShape(W - 10, H - 10, R - 7), 24)), frontPhoto, 0, 0, -D / 2 - 2);
       frontGlass.rotation.y = Math.PI;
@@ -285,7 +300,13 @@ export default function ThreePhone({ color, turn, onReady }: { color: string; tu
       }
       add(roundedPrism(23, 64, 5, 10, 1.3), frame, -W / 2 - 3, 208, 0).rotation.y = -Math.PI / 2;
 
-      const render = () => renderer.render(scene, camera);
+      const render = () => {
+        if (renderFrame || cancelled) return;
+        renderFrame = requestAnimationFrame(() => {
+          renderFrame = 0;
+          if (!cancelled) renderer.render(scene, camera);
+        });
+      };
       state = {
         renderer, scene, camera, phone, frame, cameraMetal, photos, materials, current: initial, animation: 0, disposed: false, render,
         select(name) {
@@ -343,6 +364,7 @@ export default function ThreePhone({ color, turn, onReady }: { color: string; tu
 
     return () => {
       cancelled = true;
+      if (renderFrame) cancelAnimationFrame(renderFrame);
       if (state) {
         state.disposed = true;
         if (state.animation) cancelAnimationFrame(state.animation);

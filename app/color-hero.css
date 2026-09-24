@@ -28,7 +28,7 @@
 .hero-ripple:after { content: ''; position: absolute; inset: 28%; border: 1px solid rgba(255,255,255,.16); border-radius: 50%; box-shadow: 0 0 34px rgba(255,255,255,.16),inset 0 0 26px rgba(255,255,255,.1); }
 .hero-ripple-outer { z-index: 0; }
 .hero-ripple-stage { z-index: 0; }
-.color-glow { position: absolute; z-index: 1; width: 64%; aspect-ratio: 1; border-radius: 50%; left: 50%; top: 38%; translate: -50% -50%; background: var(--hero-glow); filter: blur(105px); opacity: .25; transition: background-color .8s; pointer-events: none; }
+.color-glow { position: absolute; z-index: 1; width: 64%; aspect-ratio: 1; border-radius: 50%; left: 50%; top: 38%; translate: -50% -50%; background: radial-gradient(circle,color-mix(in srgb,var(--hero-glow) 28%,transparent),transparent 72%); pointer-events: none; }
 .reel-panel-top { position: absolute; top: 22px; left: 26px; right: 26px; z-index: 12; display: flex; align-items: center; justify-content: center; }
 .color-count { font-family: -apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',Arial,sans-serif; font-size: 13px; font-weight: 600; letter-spacing: .15em; }
 .color-count span { opacity: .5; font-weight: 400; }
@@ -42,9 +42,9 @@
 .color-card span { position: absolute; left: 0; right: 0; bottom: 9px; text-align: center; font-size: 10px; font-weight: 600; color: #5d4c53; letter-spacing: .07em; text-transform: uppercase; }
 .hero-rock { position: absolute; z-index: 4; left: 5%; bottom: -8%; width: 90%; height: 52%; border-radius: 0; background: none; box-shadow: none; filter: none; opacity: 0; transform: translateY(110%); transition: transform 1.8s cubic-bezier(.18,.67,.19,1),opacity 1.35s ease; pointer-events: none; }
 .hero-rock:after { content: none; }
-.hero-rock img { object-fit: contain!important; object-position: center bottom; filter: saturate(.58) brightness(.77) drop-shadow(0 -20px 40px rgba(10,3,7,.14)); }
+.hero-rock img { object-fit: contain!important; object-position: center bottom; filter: saturate(.58) brightness(.77); }
 .scene-ready .hero-rock { transform: translateY(0); opacity: 1; }
-.color-product { position: absolute; z-index: 11; left: 50%; top: 41%; width: clamp(400px,43vw,640px); height: 72%; opacity: 0; transform: translate(-50%,60%) scale(.91); transition: transform 1.95s cubic-bezier(.18,.68,.17,1) .8s,opacity 1.45s ease .8s; pointer-events: none; }
+.color-product { position: absolute; z-index: 11; left: 50%; top: 41%; width: clamp(400px,43vw,640px); height: 72%; opacity: 0; transform: translate(-50%,60%) scale(.91); transition: transform 1.95s cubic-bezier(.18,.68,.17,1) .8s,opacity 1.45s ease .8s; will-change: transform,opacity; pointer-events: none; }
 .scene-ready .color-product { opacity: 1; transform: translate(-50%,-50%) scale(1); }
 .entrance-complete .color-product,.entrance-complete .hero-rock { transition: none; }
 .product-artboard { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); }
@@ -70,8 +70,8 @@
 
 .scroll-scene { position: absolute; z-index: 10; inset: 0; overflow: hidden; pointer-events: none; color: var(--hero-ink); }
 .scroll-scene-backdrop { position: absolute; inset: 0; background: radial-gradient(ellipse at 72% 43%,color-mix(in srgb,var(--hero-border-stage),var(--hero-glow) 28%) 0,var(--hero-border-stage) 54%,color-mix(in srgb,var(--hero-border-stage),#000 22%) 100%); }
-.scroll-scene-glow { position: absolute; width: 55%; aspect-ratio: 1; right: 2%; top: 7%; border-radius: 50%; background: radial-gradient(circle,color-mix(in srgb,var(--hero-glow) 28%,transparent),transparent 65%); filter: blur(30px); }
-.scroll-copy { position: absolute; z-index: 3; left: 7.5%; top: 26%; width: 42%; }
+.scroll-scene-glow { position: absolute; width: 55%; aspect-ratio: 1; right: 2%; top: 7%; border-radius: 50%; background: radial-gradient(circle,color-mix(in srgb,var(--hero-glow) 28%,transparent),transparent 70%); }
+.scroll-copy { position: absolute; z-index: 3; left: 7.5%; top: 26%; width: 42%; will-change: transform,opacity; }
 .scroll-kicker { margin-bottom: 28px; font-size: 11px; font-weight: 650; letter-spacing: .24em; }
 .scroll-copy h2 { font-family: Georgia,"Times New Roman",serif; font-size: clamp(58px,6.1vw,104px); font-weight: 400; letter-spacing: -.075em; line-height: .99; }
 .scroll-copy h2 em { color: color-mix(in srgb,var(--hero-ink) 72%,var(--hero-glow)); font-weight: 400; }

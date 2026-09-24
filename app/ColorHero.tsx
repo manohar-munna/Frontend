@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import ThreePhone from "./ThreePhone";
 
 const colors = [
@@ -218,14 +218,14 @@ export default function ColorHero() {
     };
   }, [advance, entranceDone, autoPlay, autoplayEpoch, carouselVisible]);
 
-  const selectCard = (distance: number) => {
+  const selectCard = useCallback((distance: number) => {
     if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
     autoAdvanceTimer.current = null;
     setAutoplayEpoch((epoch) => epoch + 1);
     advance(distance);
-  };
+  }, [advance]);
 
-  const normalize = () => {
+  const normalize = useCallback(() => {
     const current = positionRef.current;
     if (current >= START + COUNT || current < START) {
       const next = ((current % COUNT) + COUNT) % COUNT + START;
@@ -234,7 +234,7 @@ export default function ColorHero() {
       setPosition(next);
       requestAnimationFrame(() => requestAnimationFrame(() => setResetting(false)));
     }
-  };
+  }, []);
 
   const theme = colors[active];
   const base = colors[baseIndex];
@@ -252,8 +252,46 @@ export default function ColorHero() {
   const productScale = mix(1, endScale, motion);
   const shift = panelSize.width * (mobile ? 0.03 : 0.225) * motion
     + artWidth * 0.15 * (productScale - 1 + motion);
-  const phoneTop = mix(mobile ? 40 : 41, mobile ? 65 : 49, motion);
+  const topBase = mobile ? 40 : 41;
+  const topShift = panelSize.height * (mix(topBase, mobile ? 65 : 49, motion) - topBase) / 100;
   const turn = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.29) / 0.6)));
+  const railCards = useMemo(() => mounted && Array.from({ length: COUNT * 5 }, (_, index) => START - COUNT * 2 + index).map((virtualIndex) => {
+    const travel = ENTRANCE_TRAVEL * (1 - smoothstep(wheelProgress));
+    const arcPosition = position - travel;
+    const arcRelative = virtualIndex - arcPosition;
+    const relative = virtualIndex - position;
+    const distance = Math.abs(arcRelative);
+    const lift = smoothstep(Math.min(wheelProgress / 0.78, 1));
+    const x = arcRelative * panelSize.width * 0.235 * mix(0.78, 1, lift);
+    const y = arcRelative * arcRelative * panelSize.height * 0.043 + panelSize.height * 0.52 * (1 - lift);
+    const scale = Math.max(0.78, 1 - distance * 0.055) * mix(0.78, 1, lift);
+    const rotation = arcRelative * 9;
+    const color = colors[virtualIndex % COUNT];
+    const xOffset = `${x < 0 ? "-" : "+"} ${Number(Math.abs(x).toFixed(3))}px`;
+    const style = {
+      transform: `translate3d(calc(-50% ${xOffset}), ${Number(y.toFixed(3))}px, 0px) rotate(${Number(rotation.toFixed(3))}deg) scale(${Number(scale.toFixed(4))})`,
+      opacity: wheelStarted ? Math.min(1, wheelProgress * 3) * Math.max(0, Math.min(1, 3 - distance)) : 0,
+      pointerEvents: entranceDone && carouselVisible && Math.abs(relative) <= 2 ? "auto" : "none",
+    } as CSSProperties;
+    return (
+      <button
+        type="button"
+        key={virtualIndex}
+        className={`color-card ${resetting || !entranceDone ? "no-transition" : ""}`}
+        style={style}
+        onClick={() => selectCard(relative)}
+        onTransitionEnd={(event) => {
+          if (event.target === event.currentTarget && event.propertyName === "transform") normalize();
+        }}
+        aria-label={`Show ${color.name} iPhone`}
+        aria-hidden={!entranceDone || !carouselVisible || Math.abs(relative) > 2}
+        tabIndex={!entranceDone || !carouselVisible || Math.abs(relative) > 2 ? -1 : 0}
+      >
+        <Image src={color.image} alt="" fill loading="eager" sizes="(max-width: 700px) 110px, 180px" />
+        <span>{color.name}</span>
+      </button>
+    );
+  }), [mounted, wheelProgress, position, panelSize, wheelStarted, entranceDone, carouselVisible, resetting, selectCard, normalize]);
   useEffect(() => {
     document.documentElement.style.setProperty("--header-ink", theme.ink);
   }, [theme.ink]);
@@ -288,50 +326,12 @@ export default function ColorHero() {
             <span className="color-count">0{active + 1} <span>/ 0{COUNT}</span></span>
           </div>
 
-          <div className="color-rail" aria-label="Phone color carousel">
-            {mounted && Array.from({ length: COUNT * 5 }, (_, index) => START - COUNT * 2 + index).map((virtualIndex) => {
-              // Move two card slots along the final arc. Ending at the real position
-              // keeps every card on the same path when autoplay takes over.
-              const travel = ENTRANCE_TRAVEL * (1 - smoothstep(wheelProgress));
-              const arcPosition = position - travel;
-              const arcRelative = virtualIndex - arcPosition;
-              const relative = virtualIndex - position;
-              const distance = Math.abs(arcRelative);
-              const lift = smoothstep(Math.min(wheelProgress / 0.78, 1));
-              const x = arcRelative * panelSize.width * 0.235 * mix(0.78, 1, lift);
-              const y = arcRelative * arcRelative * panelSize.height * 0.043 + panelSize.height * 0.52 * (1 - lift);
-              const scale = Math.max(0.78, 1 - distance * 0.055) * mix(0.78, 1, lift);
-              const rotation = arcRelative * 9;
-              const color = colors[virtualIndex % COUNT];
-              const xOffset = `${x < 0 ? "-" : "+"} ${Number(Math.abs(x).toFixed(3))}px`;
-              const style = {
-                transform: `translate3d(calc(-50% ${xOffset}), ${Number(y.toFixed(3))}px, 0px) rotate(${Number(rotation.toFixed(3))}deg) scale(${Number(scale.toFixed(4))})`,
-                opacity: wheelStarted ? Math.min(1, wheelProgress * 3) * Math.max(0, Math.min(1, 3 - distance)) * railOpacity : 0,
-                pointerEvents: entranceDone && scrollProgress < 0.04 && Math.abs(relative) <= 2 ? "auto" : "none",
-              } as CSSProperties;
-              return (
-                <button
-                  type="button"
-                  key={virtualIndex}
-                  className={`color-card ${resetting || !entranceDone ? "no-transition" : ""}`}
-                  style={style}
-                  onClick={() => selectCard(relative)}
-                  onTransitionEnd={(event) => {
-                    if (event.target === event.currentTarget && event.propertyName === "transform") normalize();
-                  }}
-                  aria-label={`Show ${color.name} iPhone`}
-                  aria-hidden={!entranceDone || !carouselVisible || Math.abs(relative) > 2}
-                  tabIndex={!entranceDone || !carouselVisible || Math.abs(relative) > 2 ? -1 : 0}
-                >
-                  <Image src={color.image} alt="" fill loading="eager" sizes="(max-width: 700px) 110px, 180px" />
-                  <span>{color.name}</span>
-                </button>
-              );
-            })}
+          <div className="color-rail" aria-label="Phone color carousel" style={{ opacity: railOpacity }}>
+            {railCards}
           </div>
 
           <div className="hero-rock" aria-hidden="true" style={sceneReady ? { opacity: 1 - reveal } : undefined}><Image src="/assets/moss-rock.png" alt="" fill priority sizes="(max-width: 700px) 100vw, 85vw" /></div>
-          <div ref={productRef} className="color-product" role="img" aria-label={`${theme.name} iPhone 18 Pro concept`} style={sceneReady ? { top: `${phoneTop}%`, transform: `translate(calc(-50% + ${shift}px), -50%) scale(${productScale})` } : undefined}>
+          <div ref={productRef} className="color-product" role="img" aria-label={`${theme.name} iPhone 18 Pro concept`} style={sceneReady ? { top: `${topBase}%`, transform: `translate(calc(-50% + ${shift}px), calc(-50% + ${topShift}px)) scale(${productScale})` } : undefined}>
             <div className="product-artboard" style={{ width: artWidth, height: artHeight }}>
               <svg className="phone-surface-masks" width="0" height="0" aria-hidden="true">
                 <defs>
@@ -351,7 +351,7 @@ export default function ColorHero() {
                   opacity: modelReady ? 0 : 1,
                 }}>
                   <div className="product-layer-source">
-                    {colors.map((color, index) => (
+                    {colors.map((color, index) => ({ color, index })).filter(({ index }) => index === active || index === outgoing).map(({ color, index }) => (
                       <Image
                         key={color.name}
                         src={color.image}
