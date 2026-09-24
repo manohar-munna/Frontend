@@ -47,6 +47,7 @@ export default function ColorHero() {
   const [productSize, setProductSize] = useState({ width: 560, height: 504 });
   const [wordFading, setWordFading] = useState(false);
   const [showSeam, setShowSeam] = useState(false);
+  const [introCued, setIntroCued] = useState(false);
   const [curtainOpening, setCurtainOpening] = useState(false);
   const [introDone, setIntroDone] = useState(false);
   const [sceneReady, setSceneReady] = useState(false);
@@ -56,6 +57,9 @@ export default function ColorHero() {
   const [autoPlay, setAutoPlay] = useState(true);
   const [autoplayEpoch, setAutoplayEpoch] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [modelStatus, setModelStatus] = useState<"loading" | "ready" | "unavailable">("loading");
+  const modelReady = modelStatus === "ready";
+  const handleModelReady = useCallback((ready: boolean) => setModelStatus(ready ? "ready" : "unavailable"), []);
 
   useLayoutEffect(() => {
     const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
@@ -126,13 +130,21 @@ export default function ColorHero() {
     const timers = [
       setTimeout(() => setWordFading(true), 4450),
       setTimeout(() => setShowSeam(true), 5050),
-      setTimeout(() => setCurtainOpening(true), 5500),
-      setTimeout(() => setIntroDone(true), 7100),
-      setTimeout(() => setSceneReady(true), 7150),
-      setTimeout(() => setWheelStarted(true), 10150),
+      setTimeout(() => setIntroCued(true), 5500),
     ];
     return () => timers.forEach(clearTimeout);
   }, []);
+
+  useEffect(() => {
+    if (!introCued || modelStatus === "loading") return;
+    setCurtainOpening(true);
+    const timers = [
+      setTimeout(() => setIntroDone(true), 1600),
+      setTimeout(() => setSceneReady(true), 1650),
+      setTimeout(() => setWheelStarted(true), 4650),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, [introCued, modelStatus]);
 
   useEffect(() => {
     if (!wheelStarted || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -232,7 +244,7 @@ export default function ColorHero() {
   const companionExit = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.045) / 0.26)));
   const railOpacity = 1 - smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.01) / 0.1)));
   const mobile = panelSize.width < 670;
-  // Handoff to the model before its turn, while the companion phone exits.
+  // The 3D rear remains the same object from the opening pose through the turn.
   const assetScale = Math.min(productSize.width / 1200, productSize.height / 1310);
   const artWidth = 1200 * assetScale;
   const artHeight = 1310 * assetScale;
@@ -241,9 +253,7 @@ export default function ColorHero() {
   const shift = panelSize.width * (mobile ? 0.03 : 0.225) * motion
     + artWidth * 0.15 * (productScale - 1 + motion);
   const phoneTop = mix(mobile ? 40 : 41, mobile ? 65 : 49, motion);
-  const turn = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.35) / 0.54)));
-  const modelReveal = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.29) / 0.06)));
-  const sourceFade = 1 - modelReveal;
+  const turn = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.29) / 0.6)));
   useEffect(() => {
     document.documentElement.style.setProperty("--header-ink", theme.ink);
   }, [theme.ink]);
@@ -338,7 +348,7 @@ export default function ColorHero() {
                   opacity: 1 - companionExit,
                   transform: `translate3d(${-artWidth * 0.3 * companionExit}px, ${artHeight * 0.015 * companionExit}px, 0)`,
                 } : {
-                  opacity: sourceFade,
+                  opacity: modelReady ? 0 : 1,
                 }}>
                   <div className="product-layer-source">
                     {colors.map((color, index) => (
@@ -356,8 +366,8 @@ export default function ColorHero() {
                   </div>
                 </div>
               ))}
-              <div className="three-phone-layer" style={{ opacity: modelReveal }}>
-                <ThreePhone color={theme.name} turn={turn} />
+              <div className="three-phone-layer" style={{ opacity: modelReady ? 1 : 0 }}>
+                <ThreePhone color={theme.name} turn={turn} onReady={handleModelReady} />
               </div>
             </div>
           </div>

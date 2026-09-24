@@ -2,7 +2,24 @@
 
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+
+type FinishName = "Burgundy" | "Pearl" | "Graphite" | "Sage" | "Midnight";
+type Finish = { rear: string; bounds: [number, number, number, number]; frame: string; camera: string };
+
+const finishes: Record<FinishName, Finish> = {
+  Burgundy: { rear: "/assets/iphone-rear-burgundy-v2.png", bounds: [207, 129, 816, 1404], frame: "#783245", camera: "#6d293b" },
+  Pearl: { rear: "/assets/iphone-rear-pearl-v2.png", bounds: [204, 94, 824, 1430], frame: "#c8beb6", camera: "#d6ccc5" },
+  Graphite: { rear: "/assets/iphone-rear-graphite-v2.png", bounds: [207, 129, 816, 1404], frame: "#50504f", camera: "#464746" },
+  Sage: { rear: "/assets/iphone-rear-sage-v2.png", bounds: [207, 127, 818, 1406], frame: "#748677", camera: "#67796c" },
+  Midnight: { rear: "/assets/iphone-rear-midnight-v2.png", bounds: [206, 128, 817, 1405], frame: "#304969", camera: "#283f60" },
+};
+
+const names = Object.keys(finishes) as FinishName[];
+const W = 540;
+const H = 1136;
+const D = 62;
+const R = 86;
+const bitmapSize = [1024, 1536] as const;
 
 function roundedShape(width: number, height: number, radius: number) {
   const shape = new THREE.Shape();
@@ -21,236 +38,339 @@ function roundedShape(width: number, height: number, radius: number) {
 }
 
 function roundedPrism(width: number, height: number, depth: number, radius: number, bevel: number) {
-  const geometry = new THREE.ExtrudeGeometry(roundedShape(width - 2 * bevel, height - 2 * bevel, radius - bevel), {
-    depth: depth - 2 * bevel,
+  const geometry = new THREE.ExtrudeGeometry(roundedShape(width - bevel * 2, height - bevel * 2, radius - bevel), {
+    depth: depth - bevel * 2,
     bevelEnabled: true,
     bevelThickness: bevel,
     bevelSize: bevel,
-    bevelSegments: 4,
-    curveSegments: 12,
+    bevelSegments: 5,
+    curveSegments: 24,
     steps: 1,
   });
   geometry.translate(0, 0, -depth / 2 + bevel);
   return geometry;
 }
 
-function finishTexture(canvas: HTMLCanvasElement, hex: string) {
-  const context = canvas.getContext("2d");
-  if (!context) return;
-  const { width, height } = canvas;
-  context.fillStyle = hex;
-  context.fillRect(0, 0, width, height);
-  const glow = context.createRadialGradient(width * 0.15, height * 0.02, 0, width * 0.15, height * 0.02, height * 0.85);
-  glow.addColorStop(0, "rgba(255,255,255,.19)");
-  glow.addColorStop(0.38, "rgba(255,255,255,.045)");
-  glow.addColorStop(1, "rgba(0,0,0,.13)");
-  context.fillStyle = glow;
-  context.fillRect(0, 0, width, height);
-  const shade = context.createLinearGradient(0, 0, width, 0);
-  shade.addColorStop(0, "rgba(0,0,0,.12)");
-  shade.addColorStop(0.12, "rgba(255,255,255,.025)");
-  shade.addColorStop(0.86, "rgba(0,0,0,.02)");
-  shade.addColorStop(1, "rgba(0,0,0,.18)");
-  context.fillStyle = shade;
-  context.fillRect(0, 0, width, height);
-}
-
-type PhoneFinish = {
-  body: string;
-  frame: string;
-  island: string;
-  logo: string;
-};
-
-const finishes: Record<string, PhoneFinish> = {
-  Burgundy: { body: "#713041", frame: "#8c4457", island: "#763346", logo: "#401725" },
-  Pearl: { body: "#ddd7d2", frame: "#beb5b1", island: "#d8d0ca", logo: "#958c88" },
-  Graphite: { body: "#484947", frame: "#656561", island: "#50514e", logo: "#292a28" },
-  Sage: { body: "#687e72", frame: "#7e9486", island: "#6e8476", logo: "#3f564a" },
-  Midnight: { body: "#223b5e", frame: "#38567d", island: "#2a4568", logo: "#142b4a" },
-};
-
-function appleMark() {
-  const apple = new THREE.Shape();
-  apple.moveTo(0, 38);
-  apple.bezierCurveTo(-17, 50, -31, 49, -42, 39);
-  apple.bezierCurveTo(-69, 16, -55, -29, -37, -43);
-  apple.bezierCurveTo(-23, -54, -9, -42, 0, -42);
-  apple.bezierCurveTo(11, -42, 24, -55, 39, -42);
-  apple.bezierCurveTo(48, -34, 53, -23, 54, -15);
-  apple.bezierCurveTo(29, -15, 18, 10, 33, 28);
-  apple.bezierCurveTo(39, 35, 46, 38, 53, 38);
-  apple.bezierCurveTo(42, 62, 26, 76, 8, 68);
-  apple.bezierCurveTo(2, 65, -3, 65, -9, 68);
-  apple.bezierCurveTo(-30, 76, -48, 59, -56, 39);
-  apple.bezierCurveTo(-60, 31, -62, 22, -61, 12);
-  apple.bezierCurveTo(-58, 28, -50, 37, -42, 39);
-  const leaf = new THREE.Shape();
-  leaf.moveTo(0, 74);
-  leaf.bezierCurveTo(3, 99, 16, 110, 37, 111);
-  leaf.bezierCurveTo(34, 90, 19, 76, 0, 74);
-  const group = new THREE.Group();
-  for (const shape of [apple, leaf]) {
-    const geometry = new THREE.ShapeGeometry(shape, 16);
-    const mesh = new THREE.Mesh(geometry);
-    mesh.position.z = 0;
-    group.add(mesh);
+function faceUvs(geometry: THREE.BufferGeometry, offsetX = 0, offsetY = 0) {
+  const positions = geometry.getAttribute("position");
+  const uvs = geometry.getAttribute("uv");
+  for (let i = 0; i < positions.count; i++) {
+    uvs.setXY(i, (positions.getX(i) + offsetX + W / 2) / W, (positions.getY(i) + offsetY + H / 2) / H);
   }
-  return group;
+  uvs.needsUpdate = true;
+  return geometry;
 }
 
-export default function ThreePhone({ color, turn }: { color: string; turn: number }) {
+function sideUvs(geometry: THREE.BufferGeometry) {
+  const positions = geometry.getAttribute("position");
+  const uvs = geometry.getAttribute("uv");
+  for (let i = 0; i < positions.count; i++) {
+    uvs.setXY(i, (D / 2 - positions.getZ(i)) / D, (positions.getY(i) + H / 2) / H);
+  }
+  uvs.needsUpdate = true;
+  return geometry;
+}
+
+function rearBounds(bounds: Finish["bounds"]) {
+  return new THREE.Vector4(bounds[0] / bitmapSize[0], 1 - bounds[3] / bitmapSize[1], bounds[2] / bitmapSize[0], 1 - bounds[1] / bitmapSize[1]);
+}
+
+const sideBounds = new THREE.Vector4(474 / 1024, 1 - 1512 / 1536, 558 / 1024, 1 - 19 / 1536);
+const frontBounds = new THREE.Vector4(194 / 1024, 1 - 1470 / 1536, 832 / 1024, 1 - 62 / 1536);
+
+const photoVertex = `
+  varying vec2 vUv;
+  varying float vX;
+  void main() {
+    vUv = uv;
+    vX = position.x;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const photoFragment = `
+  uniform sampler2D uFrom;
+  uniform sampler2D uTo;
+  uniform vec4 uBoundsFrom;
+  uniform vec4 uBoundsTo;
+  uniform vec3 uTintFrom;
+  uniform vec3 uTintTo;
+  uniform float uTinted;
+  uniform float uBlend;
+  varying vec2 vUv;
+  varying float vX;
+
+  vec3 sampleImage(sampler2D image, vec4 bounds, vec3 tint) {
+    vec2 uv = vec2(mix(bounds.x, bounds.z, vUv.x), mix(bounds.y, bounds.w, vUv.y));
+    if (uTinted > 0.5 && vX < -120.0) uv.y = mix(bounds.y, bounds.w, 0.53);
+    vec3 color = texture2D(image, uv).rgb;
+    if (uTinted > 0.5 && length(tint - vec3(1.0)) > 0.001) {
+      float lightness = dot(color, vec3(0.2126, 0.7152, 0.0722));
+      color = min(vec3(1.0), tint * clamp(lightness * 1.45 + 0.16, 0.1, 1.0));
+    }
+    return color;
+  }
+
+  void main() {
+    vec3 from = sampleImage(uFrom, uBoundsFrom, uTintFrom);
+    vec3 to = sampleImage(uTo, uBoundsTo, uTintTo);
+    gl_FragColor = vec4(mix(from, to, uBlend), 1.0);
+    #include <colorspace_fragment>
+  }
+`;
+
+type Photos = { rear: Record<FinishName, THREE.Texture>; side: THREE.Texture; front: THREE.Texture };
+type PhotoKind = "rear" | "side" | "front";
+
+function makePhoto(kind: PhotoKind, photos: Photos, initial: FinishName) {
+  const image = kind === "rear" ? photos.rear[initial] : kind === "side" ? photos.side : photos.front;
+  const bounds = kind === "rear" ? rearBounds(finishes[initial].bounds) : kind === "side" ? sideBounds : frontBounds;
+  const tint = new THREE.Color(1, 1, 1);
+  return new THREE.ShaderMaterial({
+    vertexShader: photoVertex,
+    fragmentShader: photoFragment,
+    uniforms: {
+      uFrom: { value: image },
+      uTo: { value: image },
+      uBoundsFrom: { value: bounds.clone() },
+      uBoundsTo: { value: bounds.clone() },
+      uTintFrom: { value: tint.clone() },
+      uTintTo: { value: tint.clone() },
+      uTinted: { value: kind === "rear" ? 0 : 1 },
+      uBlend: { value: 1 },
+    },
+    side: THREE.DoubleSide,
+    toneMapped: false,
+  });
+}
+
+function finishTint(name: FinishName, kind: "side" | "front") {
+  if (name === "Burgundy") return new THREE.Color(1, 1, 1);
+  return new THREE.Color(kind === "side" ? finishes[name].frame : finishes[name].camera);
+}
+
+type ModelState = {
+  renderer: THREE.WebGLRenderer;
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  phone: THREE.Group;
+  frame: THREE.MeshPhysicalMaterial;
+  cameraMetal: THREE.MeshPhysicalMaterial;
+  photos: Photos;
+  materials: { kind: PhotoKind; material: THREE.ShaderMaterial }[];
+  current: FinishName;
+  animation: number;
+  disposed: boolean;
+  render: () => void;
+  select: (name: FinishName) => void;
+};
+
+export default function ThreePhone({ color, turn, onReady }: { color: string; turn: number; onReady?: (ready: boolean) => void }) {
   const mountRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<{
-    renderer: THREE.WebGLRenderer;
-    scene: THREE.Scene;
-    camera: THREE.PerspectiveCamera;
-    phone: THREE.Group;
-    colored: Record<keyof PhoneFinish, THREE.MeshPhysicalMaterial>;
-    backCanvas: HTMLCanvasElement;
-    backTexture: THREE.CanvasTexture;
-  } | null>(null);
+  const latest = useRef({ color, turn });
+  latest.current = { color, turn };
+  const stateRef = useRef<ModelState | null>(null);
 
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
+    const container = mount;
     let renderer: THREE.WebGLRenderer;
     try {
       renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
     } catch {
+      onReady?.(false);
       return;
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.setClearColor(0x000000, 0);
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+    renderer.setClearColor(0, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.12;
-    renderer.domElement.setAttribute("aria-hidden", "true");
+    renderer.toneMapping = THREE.NoToneMapping;
     mount.appendChild(renderer.domElement);
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(36.3, 1200 / 1310, 1, 5000);
-    camera.position.set(0, 0, 2000);
-    camera.lookAt(0, 0, 0);
-    const ambient = new THREE.AmbientLight(0xffffff, 1.1);
-    scene.add(ambient);
-    const key = new THREE.DirectionalLight(0xffffff, 2.2);
-    key.position.set(-550, 800, 1100);
-    scene.add(key);
-    const rim = new THREE.DirectionalLight(0xe7d3dd, 1.8);
-    rim.position.set(700, 0, 650);
-    scene.add(rim);
-    const bottom = new THREE.DirectionalLight(0x8dacc5, 0.8);
-    bottom.position.set(0, -700, 450);
-    scene.add(bottom);
+    let cancelled = false;
+    let state: ModelState | null = null;
+    const loader = new THREE.TextureLoader();
+    const sources = [...names.map((name) => finishes[name].rear), "/assets/iphone-side-burgundy-v3.png", "/assets/iphone-front-burgundy-v3.png"];
 
-    const phone = new THREE.Group();
-    phone.position.set(-180, 5, 0);
-    scene.add(phone);
-    const colored = {
-      body: new THREE.MeshPhysicalMaterial({ color: 0x713041, metalness: 0.34, roughness: 0.35, clearcoat: 0.8, clearcoatRoughness: 0.18 }),
-      frame: new THREE.MeshPhysicalMaterial({ color: 0x8c4457, metalness: 0.82, roughness: 0.24, clearcoat: 1 }),
-      island: new THREE.MeshPhysicalMaterial({ color: 0x763346, metalness: 0.44, roughness: 0.28, clearcoat: 1 }),
-      logo: new THREE.MeshPhysicalMaterial({ color: 0x401725, metalness: 0.32, roughness: 0.33, clearcoat: 1, side: THREE.DoubleSide }),
-    };
-    const backCanvas = document.createElement("canvas");
-    backCanvas.width = 512;
-    backCanvas.height = 1024;
-    finishTexture(backCanvas, finishes.Burgundy.body);
-    const backTexture = new THREE.CanvasTexture(backCanvas);
-    backTexture.colorSpace = THREE.SRGBColorSpace;
-    const backFinish = new THREE.MeshPhysicalMaterial({ color: 0xffffff, map: backTexture, metalness: 0.22, roughness: 0.42, clearcoat: 0.62, clearcoatRoughness: 0.24, side: THREE.DoubleSide });
-    const black = new THREE.MeshPhysicalMaterial({ color: 0x0b0d14, metalness: 0.42, roughness: 0.17, clearcoat: 1 });
-    const glass = new THREE.MeshPhysicalMaterial({ color: 0x131b2a, metalness: 0.48, roughness: 0.06, clearcoat: 1, clearcoatRoughness: 0.04 });
-    const lensHighlight = new THREE.MeshPhysicalMaterial({ color: 0x23374a, metalness: 0.6, roughness: 0.13, clearcoat: 1 });
-    const flashMaterial = new THREE.MeshPhysicalMaterial({ color: 0xfff6e9, emissive: 0xffe8cc, emissiveIntensity: 0.65, roughness: 0.23 });
-    const add = (geometry: THREE.BufferGeometry, material: THREE.Material, x: number, y: number, z: number) => {
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.position.set(x, y, z);
-      phone.add(mesh);
-      return mesh;
-    };
-
-    add(roundedPrism(577, 1143, 42, 52, 5), colored.frame, 0, 0, 0);
-    add(roundedPrism(562, 1128, 6, 46, 2), colored.body, 0, 0, 23);
-    const faceGeometry = new THREE.ShapeGeometry(roundedShape(554, 1120, 42), 12);
-    const facePositions = faceGeometry.getAttribute("position");
-    const faceUvs = faceGeometry.getAttribute("uv");
-    for (let index = 0; index < facePositions.count; index++) {
-      faceUvs.setXY(index, (facePositions.getX(index) + 277) / 554, (facePositions.getY(index) + 560) / 1120);
-    }
-    add(faceGeometry, backFinish, 0, 0, 28);
-    add(roundedPrism(240, 240, 18, 42, 3), colored.island, -120, 399, 38);
-
-    const lens = (x: number, y: number) => {
-      const disk = (radius: number, depth: number, z: number, material: THREE.Material) => {
-        const mesh = add(new THREE.CylinderGeometry(radius, radius, depth, 64), material, x, y, z);
-        mesh.rotation.x = Math.PI / 2;
-      };
-      disk(48, 11, 53, colored.frame);
-      disk(42, 9, 60, black);
-      disk(35, 3, 66, lensHighlight);
-      disk(31, 4, 69, glass);
-      disk(12, 1, 72, black);
-      add(new THREE.TorusGeometry(28, 2.3, 10, 64), lensHighlight, x, y, 72);
-      add(new THREE.TorusGeometry(38, 1.6, 10, 64), colored.frame, x, y, 65);
-    };
-    lens(-181, 464);
-    lens(-62, 404);
-    lens(-181, 339);
-    add(new THREE.CylinderGeometry(16, 16, 4, 48), flashMaterial, -62, 485, 52).rotation.x = Math.PI / 2;
-    add(new THREE.CylinderGeometry(15, 15, 4, 48), black, -62, 321, 52).rotation.x = Math.PI / 2;
-    const logo = appleMark();
-    logo.position.set(-3, -60, 29);
-    logo.scale.setScalar(0.72);
-    logo.traverse((object) => { if (object instanceof THREE.Mesh) object.material = colored.logo; });
-    phone.add(logo);
-
-    for (const [x, y, height] of [[292, 340, 60], [292, 210, 68], [292, 105, 68], [-292, 225, 74]] as const) {
-      add(new RoundedBoxGeometry(8, height, 18, 3, 4), colored.frame, x, y, 0);
-    }
-    // The display and camera cutout complete the reusable object, even though
-    // this scene chiefly presents its rear and its volume-button edge.
-    const screen = new THREE.MeshPhysicalMaterial({ color: 0x080b13, roughness: 0.08, clearcoat: 1 });
-    add(roundedPrism(552, 1117, 2, 44, 0.4), screen, 0, 0, -23);
-    add(new RoundedBoxGeometry(108, 28, 2, 4, 14), black, 0, 495, -25);
-
-    const resize = () => {
-      renderer.setSize(mount.clientWidth, mount.clientHeight, false);
-      renderer.render(scene, camera);
-    };
-    const observer = new ResizeObserver(resize);
-    observer.observe(mount);
-    resize();
-    sceneRef.current = { renderer, scene, camera, phone, colored, backCanvas, backTexture };
-    return () => {
-      observer.disconnect();
-      sceneRef.current = null;
-      scene.traverse((object) => {
-        if (object instanceof THREE.Mesh) object.geometry.dispose();
+    async function start() {
+      const loaded = await Promise.all(sources.map((src) => loader.loadAsync(src)));
+      if (cancelled) {
+        loaded.forEach((texture) => texture.dispose());
+        return;
+      }
+      loaded.forEach((texture) => {
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8);
+        texture.minFilter = THREE.LinearMipmapLinearFilter;
+        texture.magFilter = THREE.LinearFilter;
       });
-      for (const material of [...Object.values(colored), backFinish, black, glass, lensHighlight, flashMaterial, screen]) material.dispose();
-      backTexture.dispose();
+      const rear = Object.fromEntries(names.map((name, index) => [name, loaded[index]])) as Photos["rear"];
+      const photos: Photos = { rear, side: loaded[5], front: loaded[6] };
+      const initial = (latest.current.color in finishes ? latest.current.color : "Burgundy") as FinishName;
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(28.3, 1200 / 1310, 1, 5000);
+      camera.position.set(0, 0, 2600);
+      camera.setViewOffset(1200, 1310, 180, 0, 1200, 1310);
+      camera.lookAt(0, 0, 0);
+      scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+      const key = new THREE.DirectionalLight(0xffffff, 1.65);
+      key.position.set(-400, 650, 1200);
+      scene.add(key);
+      const fill = new THREE.DirectionalLight(0xe3d3d8, 1.1);
+      fill.position.set(630, 150, 500);
+      scene.add(fill);
+      const phone = new THREE.Group();
+      phone.position.y = 15;
+      scene.add(phone);
+      const frame = new THREE.MeshPhysicalMaterial({ color: finishes[initial].frame, metalness: 0.66, roughness: 0.25, clearcoat: 0.7 });
+      const cameraMetal = new THREE.MeshPhysicalMaterial({ color: finishes[initial].camera, metalness: 0.52, roughness: 0.3, clearcoat: 0.7 });
+      const materials: ModelState["materials"] = [];
+      const photo = (kind: PhotoKind) => {
+        const material = makePhoto(kind, photos, initial);
+        materials.push({ kind, material });
+        return material;
+      };
+      const rearPhoto = photo("rear");
+      const sidePhoto = photo("side");
+      const frontPhoto = photo("front");
+      const add = (geometry: THREE.BufferGeometry, material: THREE.Material | THREE.Material[], x = 0, y = 0, z = 0) => {
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(x, y, z);
+        phone.add(mesh);
+        return mesh;
+      };
+
+      // The chassis has the same outline as the reference rear photograph.
+      // Its sides stay attached while the textured rear and front rotate.
+      add(sideUvs(roundedPrism(W, H, D, R, 3)), [frame, sidePhoto]);
+      add(faceUvs(new THREE.ShapeGeometry(roundedShape(W - 3, H - 3, R - 2), 24)), rearPhoto, 0, 0, D / 2 + 1.8);
+
+      // A real raised camera deck and separate barrels use the same calibrated
+      // photograph, so lens rings do not change appearance at the handoff.
+      const deckX = -100;
+      const deckY = 397;
+      add(roundedPrism(282, 292, 14, 53, 2), cameraMetal, deckX, deckY, D / 2 + 7);
+      add(faceUvs(new THREE.ShapeGeometry(roundedShape(279, 289, 51), 24), deckX, deckY), rearPhoto, deckX, deckY, D / 2 + 15);
+      const lenses = [
+        [-170, 465],
+        [-40, 396],
+        [-170, 324],
+      ] as const;
+      for (const [x, y] of lenses) {
+        const barrel = add(new THREE.CylinderGeometry(60, 61, 15, 72), frame, x, y, D / 2 + 23);
+        barrel.rotation.x = Math.PI / 2;
+        add(faceUvs(new THREE.CircleGeometry(58.5, 72), x, y), rearPhoto, x, y, D / 2 + 31);
+      }
+      for (const [x, y, radius] of [[-39, 493, 16], [-42, 318, 24]] as const) {
+        const hardware = add(new THREE.CylinderGeometry(radius, radius, 3, 48), cameraMetal, x, y, D / 2 + 17);
+        hardware.rotation.x = Math.PI / 2;
+        add(faceUvs(new THREE.CircleGeometry(radius - 1, 48), x, y), rearPhoto, x, y, D / 2 + 19);
+      }
+
+      const frontGlass = add(faceUvs(new THREE.ShapeGeometry(roundedShape(W - 10, H - 10, R - 7), 24)), frontPhoto, 0, 0, -D / 2 - 2);
+      frontGlass.rotation.y = Math.PI;
+
+      // Three separately raised controls and an opposing action key. The side
+      // reference supplies their machined contours; the meshes supply depth.
+      for (const [y, height] of [[348, 54], [254, 66], [150, 66]] as const) {
+        const geometry = roundedPrism(24, height, 5, 11, 1.3);
+        const positions = geometry.getAttribute("position");
+        const uvs = geometry.getAttribute("uv");
+        for (let i = 0; i < positions.count; i++) {
+          uvs.setXY(i, (D / 2 + positions.getX(i)) / D, (positions.getY(i) + y + H / 2) / H);
+        }
+        const button = add(geometry, [frame, sidePhoto], W / 2 + 2.5, y, 0);
+        button.rotation.y = Math.PI / 2;
+      }
+      add(roundedPrism(23, 64, 5, 10, 1.3), frame, -W / 2 - 3, 208, 0).rotation.y = -Math.PI / 2;
+
+      const render = () => renderer.render(scene, camera);
+      state = {
+        renderer, scene, camera, phone, frame, cameraMetal, photos, materials, current: initial, animation: 0, disposed: false, render,
+        select(name) {
+          if (name === this.current) return;
+          if (this.animation) cancelAnimationFrame(this.animation);
+          const from = this.current;
+          this.current = name;
+          for (const { kind, material } of this.materials) {
+            const a = material.uniforms;
+            a.uFrom.value = kind === "rear" ? photos.rear[from] : kind === "side" ? photos.side : photos.front;
+            a.uTo.value = kind === "rear" ? photos.rear[name] : kind === "side" ? photos.side : photos.front;
+            a.uBoundsFrom.value = kind === "rear" ? rearBounds(finishes[from].bounds) : kind === "side" ? sideBounds : frontBounds;
+            a.uBoundsTo.value = kind === "rear" ? rearBounds(finishes[name].bounds) : kind === "side" ? sideBounds : frontBounds;
+            a.uTintFrom.value = kind === "rear" ? new THREE.Color(1, 1, 1) : finishTint(from, kind);
+            a.uTintTo.value = kind === "rear" ? new THREE.Color(1, 1, 1) : finishTint(name, kind);
+            a.uBlend.value = 0;
+          }
+          const frameFrom = new THREE.Color(finishes[from].frame);
+          const frameTo = new THREE.Color(finishes[name].frame);
+          const deckFrom = new THREE.Color(finishes[from].camera);
+          const deckTo = new THREE.Color(finishes[name].camera);
+          const started = performance.now();
+          const tick = (now: number) => {
+            if (this.disposed) return;
+            const p = Math.min(1, (now - started) / 1020);
+            const eased = p * p * (3 - 2 * p);
+            for (const { material } of this.materials) material.uniforms.uBlend.value = eased;
+            frame.color.lerpColors(frameFrom, frameTo, eased);
+            cameraMetal.color.lerpColors(deckFrom, deckTo, eased);
+            render();
+            this.animation = p < 1 ? requestAnimationFrame(tick) : 0;
+          };
+          this.animation = requestAnimationFrame(tick);
+        },
+      };
+      stateRef.current = state;
+      const resize = () => {
+        renderer.setSize(container.clientWidth, container.clientHeight, false);
+        render();
+      };
+      resize();
+      const resizeObserver = new ResizeObserver(resize);
+      resizeObserver.observe(container);
+      container.dataset.ready = "true";
+      onReady?.(true);
+      if (latest.current.color !== initial) state.select(latest.current.color as FinishName);
+      state.phone.rotation.y = THREE.MathUtils.degToRad(-34 * (1 - latest.current.turn));
+      render();
+      state.scene.userData.resizeObserver = resizeObserver;
+    }
+    start().catch((error) => {
+      console.error("Phone model could not load", error);
+      onReady?.(false);
+    });
+
+    return () => {
+      cancelled = true;
+      if (state) {
+        state.disposed = true;
+        if (state.animation) cancelAnimationFrame(state.animation);
+        (state.scene.userData.resizeObserver as ResizeObserver | undefined)?.disconnect();
+        state.scene.traverse((object) => {
+          if (object instanceof THREE.Mesh) object.geometry.dispose();
+        });
+        for (const { material } of state.materials) material.dispose();
+        state.frame.dispose();
+        state.cameraMetal.dispose();
+        for (const texture of [...Object.values(state.photos.rear), state.photos.side, state.photos.front]) texture.dispose();
+      }
+      stateRef.current = null;
       renderer.dispose();
       mount.removeChild(renderer.domElement);
     };
-  }, []);
+  }, [onReady]);
 
   useEffect(() => {
-    const state = sceneRef.current;
-    if (!state) return;
-    const finish = finishes[color] ?? finishes.Burgundy;
-    (Object.keys(state.colored) as (keyof PhoneFinish)[]).forEach((part) => state.colored[part].color.set(finish[part]));
-    finishTexture(state.backCanvas, finish.body);
-    state.backTexture.needsUpdate = true;
-    state.renderer.render(state.scene, state.camera);
+    const state = stateRef.current;
+    if (state && color in finishes) state.select(color as FinishName);
   }, [color]);
 
   useEffect(() => {
-    const state = sceneRef.current;
+    const state = stateRef.current;
     if (!state) return;
-    state.phone.rotation.y = (-38 * (1 - turn) * Math.PI) / 180;
-    state.renderer.render(state.scene, state.camera);
+    state.phone.rotation.y = THREE.MathUtils.degToRad(-34 * (1 - turn));
+    state.render();
   }, [turn]);
 
   return <div ref={mountRef} className="three-phone" aria-hidden="true" />;
