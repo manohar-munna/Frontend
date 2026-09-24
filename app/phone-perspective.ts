@@ -60,3 +60,25 @@ export function phonePerspective(progress: number, scale: number) {
   };
   return { rear: transform(rear, rearVertices), rail: transform(rail, railVertices) };
 }
+
+export function phoneAssetPerspective(progress: number, scale: number, bounds: readonly [number, number, number, number]) {
+  const [left, top, right, bottom] = bounds;
+  const source: Quad = [[left, top], [right, top], [right, bottom], [left, bottom]];
+  const yaw = (-38 * (1 - progress) * Math.PI) / 180;
+  const target = ([[-285, -568], [285, -568], [285, 568], [-285, 568]] as const).map(([x, y], index): Point => {
+    const z = 16;
+    const project = (angle: number): Point => {
+      const rotatedX = x * Math.cos(angle) + z * Math.sin(angle);
+      const rotatedZ = -x * Math.sin(angle) + z * Math.cos(angle);
+      const perspective = 2600 / (2600 - rotatedZ);
+      return [420 + rotatedX * perspective, 650 + y * perspective];
+    };
+    const initial = project(-38 * Math.PI / 180);
+    const current = project(yaw);
+    return [
+      current[0] + (rear[index][0] - initial[0]) * (1 - progress),
+      current[1] + (rear[index][1] - initial[1]) * (1 - progress),
+    ];
+  }) as unknown as Quad;
+  return projectionMatrix(source, target, scale);
+}
