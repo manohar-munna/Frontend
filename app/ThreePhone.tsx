@@ -331,7 +331,7 @@ export default function ThreePhone({ color, turn, onReady }: { color: string; tu
           const started = performance.now();
           const tick = (now: number) => {
             if (this.disposed) return;
-            const p = Math.min(1, (now - started) / 780);
+            const p = Math.min(1, (now - started) / 560);
             const eased = p * p * (3 - 2 * p);
             for (const { material } of this.materials) material.uniforms.uBlend.value = eased;
             frame.color.lerpColors(frameFrom, frameTo, eased);
