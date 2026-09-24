@@ -4,14 +4,14 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 
 type FinishName = "Burgundy" | "Pearl" | "Graphite" | "Sage" | "Midnight";
-type Finish = { rear: string; bounds: [number, number, number, number]; frame: string; camera: string };
+type Finish = { rear: string; bounds: [number, number, number, number]; frame: string; camera: string; back: string };
 
 const finishes: Record<FinishName, Finish> = {
-  Burgundy: { rear: "/assets/iphone-rear-burgundy-v2.png", bounds: [207, 129, 816, 1404], frame: "#783245", camera: "#6d293b" },
-  Pearl: { rear: "/assets/iphone-rear-pearl-v2.png", bounds: [204, 94, 824, 1430], frame: "#c8beb6", camera: "#d6ccc5" },
-  Graphite: { rear: "/assets/iphone-rear-graphite-v2.png", bounds: [207, 129, 816, 1404], frame: "#50504f", camera: "#464746" },
-  Sage: { rear: "/assets/iphone-rear-sage-v2.png", bounds: [207, 127, 818, 1406], frame: "#748677", camera: "#67796c" },
-  Midnight: { rear: "/assets/iphone-rear-midnight-v2.png", bounds: [206, 128, 817, 1405], frame: "#304969", camera: "#283f60" },
+  Burgundy: { rear: "/assets/iphone-rear-burgundy-v2.png", bounds: [207, 129, 816, 1404], frame: "#783245", camera: "#6d293b", back: "#512431" },
+  Pearl: { rear: "/assets/iphone-rear-pearl-v2.png", bounds: [204, 94, 824, 1430], frame: "#c8beb6", camera: "#d6ccc5", back: "#aaa29d" },
+  Graphite: { rear: "/assets/iphone-rear-graphite-v2.png", bounds: [207, 129, 816, 1404], frame: "#50504f", camera: "#464746", back: "#343537" },
+  Sage: { rear: "/assets/iphone-rear-sage-v2.png", bounds: [207, 127, 818, 1406], frame: "#748677", camera: "#67796c", back: "#596a5d" },
+  Midnight: { rear: "/assets/iphone-rear-midnight-v2.png", bounds: [206, 128, 817, 1405], frame: "#304969", camera: "#283f60", back: "#213753" },
 };
 
 const names = Object.keys(finishes) as FinishName[];
@@ -170,12 +170,12 @@ function makeShutterMaterial() {
         float r = length(p);
         float a = atan(p.y, p.x);
         float blade = fract(a * 0.95492966 + r * 0.22 + 0.5 + uOpen * 0.07);
-        float opening = mix(0.13, 0.29, uOpen) + 0.009 * cos(a * 6.0);
+        float opening = mix(0.11, 0.34, uOpen) + 0.014 * cos(a * 6.0);
         float pupil = 1.0 - smoothstep(opening - 0.022, opening + 0.025, r);
         float seam = 1.0 - smoothstep(0.0, 0.017, blade);
-        float bladeLight = 0.003 + 0.002 * cos(a * 6.0 + r * 4.0);
-        vec3 metal = vec3(0.0015, 0.0016, 0.0022) + vec3(bladeLight) * smoothstep(opening, opening + 0.12, r);
-        metal += vec3(0.025, 0.024, 0.03) * seam * smoothstep(opening + 0.05, opening + 0.16, r) * (1.0 - smoothstep(0.8, 0.9, r));
+        float bladeLight = 0.009 + 0.005 * cos(a * 6.0 + r * 4.0);
+        vec3 metal = vec3(0.003, 0.0035, 0.0045) + vec3(bladeLight) * smoothstep(opening, opening + 0.12, r);
+        metal += vec3(0.050, 0.048, 0.055) * seam * smoothstep(opening + 0.05, opening + 0.16, r) * (1.0 - smoothstep(0.8, 0.9, r));
         float innerGlow = exp(-pow((r - opening * 0.72) * 38.0, 2.0));
         vec3 glass = vec3(0.0006, 0.0007, 0.002) + vec3(0.01, 0.004, 0.022) * innerGlow;
         glass += vec3(0.042, 0.034, 0.057) * exp(-length((p - vec2(-0.1, 0.1)) * 18.0));
@@ -192,6 +192,38 @@ function makeShutterMaterial() {
   });
 }
 
+function makeOpticalGlass() {
+  return new THREE.ShaderMaterial({
+    uniforms: { uReveal: { value: 0 } },
+    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `
+      uniform float uReveal;
+      varying vec2 vUv;
+      void main() {
+        vec2 p = (vUv - .5) * 2.;
+        float r = length(p);
+        float angle = atan(p.y, p.x);
+        float bevel = exp(-pow((r - .87) * 30., 2.));
+        float innerRing = exp(-pow((r - .55) * 27., 2.));
+        float iris = exp(-pow((r - .29) * 24., 2.));
+        float blueGlint = exp(-length((p - vec2(-.12,.12)) * vec2(10.,15.)));
+        float violetGlint = exp(-length((p - vec2(.14,-.18)) * vec2(8.,12.)));
+        vec3 color = vec3(.006,.009,.015);
+        color += vec3(.018,.027,.046) * bevel;
+        color += vec3(.008,.012,.022) * innerRing;
+        color += vec3(.012,.022,.040) * iris;
+        color += vec3(.09,.15,.24) * blueGlint + vec3(.065,.028,.10) * violetGlint;
+        color += vec3(.015,.025,.043) * max(0.,sin(angle*2.+.7)) * smoothstep(.35,.75,r);
+        gl_FragColor = vec4(color, uReveal * (1. - smoothstep(.965,1.,r)));
+        #include <colorspace_fragment>
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    toneMapped: false,
+  });
+}
+
 type ModelState = {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
@@ -199,6 +231,9 @@ type ModelState = {
   phone: THREE.Group;
   frame: THREE.MeshPhysicalMaterial;
   cameraMetal: THREE.MeshPhysicalMaterial;
+  backSurface: THREE.MeshPhysicalMaterial;
+  detailMaterials: THREE.Material[];
+  opticalGlass: THREE.ShaderMaterial;
   shutter: THREE.ShaderMaterial;
   shutterRings: THREE.MeshPhysicalMaterial[];
   photos: Photos;
@@ -218,15 +253,22 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
   state.phone.updateMatrixWorld(true);
   const focus = new THREE.Vector3(-170, 465, D / 2 + 36).applyMatrix4(state.phone.matrixWorld);
   const close = shutterPhase * shutterPhase * (3 - 2 * shutterPhase);
-  const targetX = focus.x + (compact ? -14 : -50);
-  const targetY = focus.y;
+  const targetX = focus.x + (compact ? -20 : 0);
+  const targetY = focus.y - (compact ? 18 : 10);
   const cameraX = THREE.MathUtils.lerp(0, targetX, close);
-  const cameraY = THREE.MathUtils.lerp(0, targetY, close);
-  state.camera.position.set(cameraX, cameraY, THREE.MathUtils.lerp(2600, 760, close));
+  const verticalFrame = THREE.MathUtils.smoothstep(shutterPhase, 0, 0.8);
+  const cameraY = THREE.MathUtils.lerp(0, targetY, verticalFrame);
+  state.camera.position.set(cameraX, cameraY, THREE.MathUtils.lerp(2600, compact ? 1430 : 1320, close));
   state.camera.lookAt(cameraX, cameraY, 0);
-  state.camera.zoom = THREE.MathUtils.lerp(1, compact ? 3.1 : 3.65, close);
+  state.camera.zoom = THREE.MathUtils.lerp(1, compact ? 2.15 : 3.15, close);
   state.camera.updateProjectionMatrix();
-  const reveal = THREE.MathUtils.clamp((shutterPhase - 0.38) / 0.3, 0, 1);
+  const detailReveal = THREE.MathUtils.smoothstep(shutterPhase, 0.08, 0.56);
+  state.backSurface.opacity = detailReveal;
+  for (const material of state.detailMaterials) {
+    if (material instanceof THREE.MeshPhysicalMaterial || material instanceof THREE.MeshBasicMaterial) material.opacity = detailReveal;
+  }
+  state.opticalGlass.uniforms.uReveal.value = detailReveal;
+  const reveal = THREE.MathUtils.smoothstep(shutterPhase, 0.5, 0.82);
   state.shutter.uniforms.uReveal.value = reveal;
   state.shutter.uniforms.uOpen.value = THREE.MathUtils.clamp((shutterPhase - 0.57) / 0.43, 0, 1);
   for (const ring of state.shutterRings) ring.opacity = reveal;
@@ -256,7 +298,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
     const debugRenderer = gl.getExtension("WEBGL_debug_renderer_info");
     const rendererName = String(gl.getParameter(debugRenderer?.UNMASKED_RENDERER_WEBGL || gl.RENDERER));
     const softwareRenderer = /swiftshader|llvmpipe|software/i.test(rendererName);
-    renderer.setPixelRatio(softwareRenderer ? 1 : Math.min(devicePixelRatio || 1, 1.05));
+    renderer.setPixelRatio(softwareRenderer ? 1 : Math.min(devicePixelRatio || 1, 1.3));
     renderer.setClearColor(0, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.NoToneMapping;
@@ -302,6 +344,13 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       scene.add(phone);
       const frame = new THREE.MeshPhysicalMaterial({ color: finishes[initial].frame, metalness: 0.66, roughness: 0.25, clearcoat: 0.7 });
       const cameraMetal = new THREE.MeshPhysicalMaterial({ color: finishes[initial].camera, metalness: 0.52, roughness: 0.3, clearcoat: 0.7 });
+      const backSurface = new THREE.MeshPhysicalMaterial({ color: finishes[initial].back, metalness: 0.18, roughness: 0.41, clearcoat: 0.26, transparent: true, opacity: 0, depthWrite: false });
+      const detailMaterials: THREE.Material[] = [];
+      const detail = (color: THREE.ColorRepresentation, metalness: number, roughness: number) => {
+        const material = new THREE.MeshPhysicalMaterial({ color, metalness, roughness, clearcoat: 0.75, transparent: true, opacity: 0, depthWrite: false });
+        detailMaterials.push(material);
+        return material;
+      };
       const materials: ModelState["materials"] = [];
       const photo = (kind: PhotoKind) => {
         const material = makePhoto(kind, photos, initial);
@@ -322,6 +371,9 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       // Its sides stay attached while the textured rear and front rotate.
       add(sideUvs(roundedPrism(W, H, D, R, 3)), [frame, sidePhoto]);
       add(faceUvs(new THREE.ShapeGeometry(roundedShape(W - 3, H - 3, R - 2), 24)), rearPhoto, 0, 0, D / 2 + 1.8);
+      // The hero uses a calibrated photograph. At macro distance a continuous
+      // modeled finish takes over, so its edges and camera face stay sharp.
+      add(new THREE.ShapeGeometry(roundedShape(W - 3, H - 3, R - 2), 32), backSurface, 0, 0, D / 2 + 2.1);
 
       // A real raised camera deck and separate barrels use the same calibrated
       // photograph, so lens rings do not change appearance at the handoff.
@@ -329,27 +381,46 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       const deckY = 397;
       add(roundedPrism(282, 292, 14, 53, 2), cameraMetal, deckX, deckY, D / 2 + 7);
       add(faceUvs(new THREE.ShapeGeometry(roundedShape(279, 289, 51), 16), deckX, deckY), rearPhoto, deckX, deckY, D / 2 + 16.5);
+      const deckFinish = detail(finishes[initial].camera, 0.46, 0.3);
+      add(new THREE.ShapeGeometry(roundedShape(276, 286, 50), 32), deckFinish, deckX, deckY, D / 2 + 16.85);
+      const barrelBlack = detail(0x080a0d, 0.44, 0.24);
+      const polishedEdge = detail(0x949aa2, 0.84, 0.19);
+      const innerEdge = detail(0x252b32, 0.7, 0.23);
+      const opticalGlass = makeOpticalGlass();
+      detailMaterials.push(opticalGlass);
       const lenses = [
         [-170, 465],
         [-40, 396],
         [-170, 324],
       ] as const;
       for (const [x, y] of lenses) {
-        const barrel = add(new THREE.CylinderGeometry(60, 61, 15, 48), frame, x, y, D / 2 + 25);
+        const barrel = add(new THREE.CylinderGeometry(60, 61, 15, 96), frame, x, y, D / 2 + 25);
         barrel.rotation.x = Math.PI / 2;
-        add(faceUvs(new THREE.CircleGeometry(58.5, 48), x, y), rearPhoto, x, y, D / 2 + 35);
+        add(faceUvs(new THREE.CircleGeometry(58.5, 96), x, y), rearPhoto, x, y, D / 2 + 35);
+        add(new THREE.CircleGeometry(55, 128), barrelBlack, x, y, D / 2 + 35.6);
+        add(new THREE.TorusGeometry(55.5, 2.5, 16, 128), polishedEdge, x, y, D / 2 + 36.4);
+        add(new THREE.TorusGeometry(47.5, 1.35, 12, 128), innerEdge, x, y, D / 2 + 37.1);
+        add(new THREE.CircleGeometry(45.5, 128), opticalGlass, x, y, D / 2 + 37.4);
       }
+
+      const flashRing = detail(0xa6a5a4, 0.75, 0.21);
+      const flashGlass = detail(0xe9e5da, 0.02, 0.11);
+      const sensorRing = detail(0x34373a, 0.52, 0.27);
+      add(new THREE.TorusGeometry(17.5, 2, 12, 96), flashRing, -40, 469, D / 2 + 18.2);
+      add(new THREE.CircleGeometry(15.5, 96), flashGlass, -40, 469, D / 2 + 18.5);
+      add(new THREE.TorusGeometry(18, 1.5, 12, 96), sensorRing, -40, 324, D / 2 + 18.2);
+      add(new THREE.CircleGeometry(16, 96), barrelBlack, -40, 324, D / 2 + 18.5);
 
       // The main camera uses a six-blade variable aperture. Keep the close-up
       // attached to its actual lens instead of moving dozens of glass meshes.
       const shutter = makeShutterMaterial();
-      add(new THREE.CircleGeometry(57.5, 96), shutter, -170, 465, D / 2 + 37);
+      add(new THREE.CircleGeometry(45.5, 128), shutter, -170, 465, D / 2 + 38.2);
       const shutterRings = [
         new THREE.MeshPhysicalMaterial({ color: 0x13151a, metalness: 0.78, roughness: 0.23, clearcoat: 0.8, transparent: true, opacity: 0, depthWrite: false }),
         new THREE.MeshPhysicalMaterial({ color: 0x343139, metalness: 0.68, roughness: 0.28, clearcoat: 0.7, transparent: true, opacity: 0, depthWrite: false }),
       ];
-      add(new THREE.TorusGeometry(55, 4.5, 12, 96), shutterRings[0], -170, 465, D / 2 + 39);
-      add(new THREE.TorusGeometry(47, 1.6, 8, 96), shutterRings[1], -170, 465, D / 2 + 40);
+      add(new THREE.TorusGeometry(53, 3, 16, 128), shutterRings[0], -170, 465, D / 2 + 39.2);
+      add(new THREE.TorusGeometry(46, 1.25, 12, 128), shutterRings[1], -170, 465, D / 2 + 40);
 
       // The reference deck already has a precisely aligned flash and dark
       // sensor. Extra disks doubled their outlines and overlapped the photo.
@@ -379,7 +450,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
         });
       };
       state = {
-        renderer, scene, camera, phone, frame, cameraMetal, shutter, shutterRings, photos, materials, current: initial, animation: 0, disposed: false, render,
+        renderer, scene, camera, phone, frame, cameraMetal, backSurface, detailMaterials, opticalGlass, shutter, shutterRings, photos, materials, current: initial, animation: 0, disposed: false, render,
         select(name) {
           if (name === this.current) return;
           if (this.animation) cancelAnimationFrame(this.animation);
@@ -399,6 +470,8 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
           const frameTo = new THREE.Color(finishes[name].frame);
           const deckFrom = new THREE.Color(finishes[from].camera);
           const deckTo = new THREE.Color(finishes[name].camera);
+          const backFrom = new THREE.Color(finishes[from].back);
+          const backTo = new THREE.Color(finishes[name].back);
           const started = performance.now();
           const tick = (now: number) => {
             if (this.disposed) return;
@@ -407,6 +480,8 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
             for (const { material } of this.materials) material.uniforms.uBlend.value = eased;
             frame.color.lerpColors(frameFrom, frameTo, eased);
             cameraMetal.color.lerpColors(deckFrom, deckTo, eased);
+            deckFinish.color.lerpColors(deckFrom, deckTo, eased);
+            backSurface.color.lerpColors(backFrom, backTo, eased);
             render();
             this.animation = p < 1 ? requestAnimationFrame(tick) : 0;
           };
@@ -446,6 +521,8 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
         for (const { material } of state.materials) material.dispose();
         state.frame.dispose();
         state.cameraMetal.dispose();
+        state.backSurface.dispose();
+        for (const material of state.detailMaterials) material.dispose();
         state.shutter.dispose();
         for (const ring of state.shutterRings) ring.dispose();
         for (const texture of [...Object.values(state.photos.rear), state.photos.side, state.photos.front]) texture.dispose();
