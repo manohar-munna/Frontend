@@ -3,8 +3,8 @@ type Quad = readonly [Point, Point, Point, Point];
 
 // Corners of the rear glass and right rail in the original 1200 x 1310 render.
 // The two surfaces share their seam, so the initial projection is the hero image.
-const rear: Quad = [[178, 129], [624, 39], [624, 1260], [178, 1220]];
-const rail: Quad = [[624, 39], [666, 57], [666, 1275], [624, 1260]];
+const rear: Quad = [[178, 129], [615, 58], [615, 1245], [178, 1220]];
+const rail: Quad = [[615, 58], [666, 57], [666, 1275], [615, 1245]];
 
 function projectionMatrix(source: Quad, target: Quad, scale: number) {
   const equations: number[][] = [];
@@ -44,8 +44,8 @@ export function phonePerspective(progress: number, scale: number) {
     const perspective = 2600 / (2600 - rotatedZ);
     return [420 + rotatedX * perspective, 650 + y * perspective];
   };
-  const rearVertices = [[-260, -590, 16], [260, -590, 16], [260, 590, 16], [-260, 590, 16]] as const;
-  const railVertices = [[260, -590, 16], [260, -590, -24], [260, 590, -24], [260, 590, 16]] as const;
+  const rearVertices = [[-285, -568, 16], [285, -568, 16], [285, 568, 16], [-285, 568, 16]] as const;
+  const railVertices = [[285, -568, 16], [285, -568, -24], [285, 568, -24], [285, 568, 16]] as const;
   const transform = (source: Quad, vertices: typeof rearVertices | typeof railVertices) => {
     const target = vertices.map(([x, y, z], index): Point => {
       const initial = project(x, y, z, -38 * Math.PI / 180);
