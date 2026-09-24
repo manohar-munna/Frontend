@@ -219,7 +219,7 @@ export default function ColorHero() {
   const assetScale = Math.min(productSize.width / 1200, productSize.height / 1310);
   const artWidth = 1200 * assetScale;
   const artHeight = 1310 * assetScale;
-  const endScale = panelSize.height * (mobile ? 0.37 : 0.66) / (artHeight * 0.915);
+  const endScale = panelSize.height * (mobile ? 0.37 : 0.66) / (artHeight * (1136 / 1310));
   const productScale = mix(1, endScale, motion);
   const shift = panelSize.width * (mobile ? 0.03 : 0.225) * motion
     + artWidth * 0.15 * (productScale - 1 + motion);
@@ -308,10 +308,10 @@ export default function ColorHero() {
               <svg className="phone-surface-masks" width="0" height="0" aria-hidden="true">
                 <defs>
                   <clipPath id="phone-rear-surface" clipPathUnits="objectBoundingBox">
-                    <path d="M0 0 H.45 Q.52 0 .52 .107 V.878 Q.52 .962 .45 .962 H0 Z" />
+                    <path d="M0 0 H.44 V.045 Q.5125 .045 .5125 .14 V.86 Q.5125 .95 .44 .95 H0 Z" />
                   </clipPath>
                   <clipPath id="phone-rail-surface" clipPathUnits="objectBoundingBox">
-                    <path clipRule="evenodd" d="M0 0 H.56 V.14 L.5525 .15 V1 H0 Z M0 0 H.45 Q.52 0 .52 .107 V.878 Q.52 .962 .45 .962 H0 Z" />
+                    <path clipRule="evenodd" d="M0 0 H.56 V.14 L.5525 .15 V1 H0 Z M0 0 H.44 V.045 Q.5125 .045 .5125 .14 V.86 Q.5125 .95 .44 .95 H0 Z" />
                   </clipPath>
                 </defs>
               </svg>
