@@ -242,6 +242,7 @@ export default function ColorHero() {
   const phaseOne = clamp01(scrollProgress / 0.54);
   const lensPhase = smoothstep(clamp01((scrollProgress - 0.54) / 0.18));
   const shutterPhase = smoothstep(clamp01((scrollProgress - 0.75) / 0.23));
+  const cameraVignette = smoothstep(clamp01((shutterPhase - 0.04) / 0.5));
   const lensReveal = smoothstep(clamp01((lensPhase - 0.05) / 0.28));
   const reveal = smoothstep(clamp01((phaseOne - 0.06) / 0.34));
   const motion = smoothstep(clamp01((phaseOne - 0.13) / 0.74));
@@ -374,7 +375,7 @@ export default function ColorHero() {
                   </div>
                 </div>
               ))}
-              <div className="three-phone-layer" style={{ opacity: modelReady ? 1 : 0, width: "300%", left: "-100%" }}>
+              <div className="three-phone-layer" style={{ opacity: modelReady ? 1 : 0, width: "300%", left: "-100%", maskImage: cameraVignette > 0 ? `linear-gradient(to bottom, transparent, #000 ${9 * cameraVignette}%, #000 ${100 - 16 * cameraVignette}%, transparent)` : undefined }}>
                 <ThreePhone color={theme.name} turn={turn} lensPhase={lensPhase} shutterPhase={shutterPhase} compact={mobile} onReady={handleModelReady} />
               </div>
             </div>
@@ -395,8 +396,12 @@ export default function ColorHero() {
               <span>{theme.name.toUpperCase()}</span><span>18 / PRO</span>
             </div>
           </div>
-          <div className="shutter-copy" style={{ opacity: smoothstep(clamp01((shutterPhase - 0.68) / 0.27)) }}>
-            <h2>48MP Fusion Main camera.<br />Aperture that adapts to the light.</h2>
+          <div className="camera-info-screen" style={{ opacity: smoothstep(clamp01((shutterPhase - 0.27) / 0.35)) }} />
+          <div className="shutter-copy" style={{ opacity: smoothstep(clamp01((shutterPhase - 0.4) / 0.45)), transform: `translateY(${Number(((1 - shutterPhase) * 26).toFixed(2))}px)` }}>
+            <p className="shutter-kicker">02 / THE CAMERA</p>
+            <h2>Light, under<br /><em>control.</em></h2>
+            <p className="shutter-description">The 48MP Fusion Main camera brings the scene into focus. Watch its six-blade aperture open to meet the light.</p>
+            <div className="shutter-specs"><span><strong>48MP</strong>Fusion Main</span><span><strong>ƒ/1.48–ƒ/4</strong>Variable aperture</span></div>
           </div>
         </div>
         </div>
