@@ -202,33 +202,33 @@ function makeIrisBlade(index: number) {
   geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
   geometry.setIndex(triangles);
   geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 47);
-  updateIrisBlade(geometry, index, 0);
+  updateIrisBlade(geometry, index, 0, 0);
   return geometry;
 }
 
-function updateIrisBlade(geometry: THREE.BufferGeometry, index: number, open: number) {
+function updateIrisBlade(geometry: THREE.BufferGeometry, index: number, closure: number, reopening: number) {
   const attribute = geometry.getAttribute("position") as THREE.BufferAttribute;
   const row = IRIS_ARC_STEPS + 1;
   const faceCount = row * (IRIS_RADIAL_STEPS + 1);
   const sector = (Math.PI * 2) / IRIS_BLADE_COUNT;
-  const innerRadius = THREE.MathUtils.lerp(4.2, 19.6, open);
-  const innerTwist = THREE.MathUtils.lerp(1.12, 0.92, open);
+  const innerRadius = THREE.MathUtils.lerp(THREE.MathUtils.lerp(45.7, 4.2, closure), 19.6, reopening);
+  const innerTwist = 1.12 * closure - 0.2 * reopening;
   const start = index * sector + innerTwist;
   const end = (index + 1) * sector + innerTwist;
   const bladeHeight = 0.36 * (index % 3);
   const setPoint = (vertex: number, radial: number, arc: number) => {
     const t = arc / IRIS_ARC_STEPS;
     const innerAngle = THREE.MathUtils.lerp(start, end, t);
-    const curvedRadius = innerRadius * (1 - 0.055 * Math.sin(t * Math.PI));
+    const curvedRadius = innerRadius * (1 - 0.055 * closure * Math.sin(t * Math.PI));
     const innerX = Math.cos(innerAngle) * curvedRadius;
     const innerY = Math.sin(innerAngle) * curvedRadius;
-    const outerAngle = (index + t) * sector + THREE.MathUtils.lerp(-0.22, 0.2, t);
+    const outerAngle = (index + t) * sector + closure * THREE.MathUtils.lerp(-0.22, 0.2, t);
     const outerX = Math.cos(outerAngle) * 45.7;
     const outerY = Math.sin(outerAngle) * 45.7;
     const bow = radial * radial * (3 - 2 * radial);
     const dx = outerX - innerX;
     const dy = outerY - innerY;
-    const bend = Math.sin(radial * Math.PI) * 3.4 / Math.hypot(dx, dy);
+    const bend = closure * Math.sin(radial * Math.PI) * 3.4 / Math.max(0.0001, Math.hypot(dx, dy));
     const x = THREE.MathUtils.lerp(innerX, outerX, bow) - dy * bend;
     const y = THREE.MathUtils.lerp(innerY, outerY, bow) + dx * bend;
     const z = bladeHeight + (1 - radial) * 0.32 + Math.sin(t * Math.PI) * Math.sin(radial * Math.PI) * 1.65;
@@ -386,7 +386,7 @@ type ModelState = {
   bladeTexture: THREE.Texture;
   irisAssembly: THREE.Group;
   irisBlades: { geometry: THREE.BufferGeometry; material: THREE.MeshPhysicalMaterial; seam: THREE.BufferGeometry; seamMaterial: THREE.ShaderMaterial; lip: THREE.BufferGeometry; lipMaterial: THREE.MeshPhysicalMaterial }[];
-  irisOpen: number;
+  irisMotion: number;
   shutterRings: THREE.MeshPhysicalMaterial[];
   photos: Photos;
   materials: { kind: PhotoKind; material: THREE.ShaderMaterial }[];
@@ -419,24 +419,25 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
     if (material instanceof THREE.MeshPhysicalMaterial || material instanceof THREE.MeshBasicMaterial) material.opacity = detailReveal;
   }
   state.flashGlass.uniforms.uReveal.value = detailReveal;
-  const reveal = THREE.MathUtils.smoothstep(shutterPhase, 0.62, 0.93);
-  const open = THREE.MathUtils.smoothstep(shutterPhase, 0.63, 1);
-  state.irisAssembly.rotation.z = (1 - open) * 0.2;
-  if (Math.abs(state.irisOpen - open) > 0.0001) {
+  const closure = THREE.MathUtils.smoothstep(shutterPhase, 0.43, 0.76);
+  const reopening = THREE.MathUtils.smoothstep(shutterPhase, 0.76, 1);
+  state.irisAssembly.visible = closure > 0.001;
+  state.irisAssembly.rotation.z = 0.2 * (closure - reopening);
+  const motion = closure + reopening;
+  if (Math.abs(state.irisMotion - motion) > 0.0001) {
     for (let index = 0; index < state.irisBlades.length; index++) {
       const blade = state.irisBlades[index];
-      updateIrisBlade(blade.geometry, index, open);
+      updateIrisBlade(blade.geometry, index, closure, reopening);
       updateIrisSeam(blade.seam, blade.geometry);
       updateIrisLip(blade.lip, blade.geometry);
     }
-    state.irisOpen = open;
+    state.irisMotion = motion;
   }
   for (const blade of state.irisBlades) {
-    blade.material.opacity = reveal;
-    blade.seamMaterial.uniforms.uOpacity.value = reveal * 0.66;
-    blade.lipMaterial.opacity = reveal * 0.68;
+    blade.seamMaterial.uniforms.uOpacity.value = 0.66;
+    blade.lipMaterial.opacity = 0.68;
   }
-  for (const ring of state.shutterRings) ring.opacity = reveal;
+  for (const ring of state.shutterRings) ring.opacity = THREE.MathUtils.smoothstep(shutterPhase, 0.3, 0.72);
   state.render();
 }
 
@@ -610,7 +611,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       const bladePalette = [0x696b70, 0x72747a, 0x676970, 0x6c6e74, 0x65676d, 0x707278];
       const irisBlades = bladePalette.map((color, index) => {
         const geometry = makeIrisBlade(index);
-        const material = new THREE.MeshPhysicalMaterial({ color, map: bladeTexture, vertexColors: true, metalness: 0.2, roughness: 0.76, clearcoat: 0, bumpMap: bladeTexture, bumpScale: 0.28, envMap: environment.texture, envMapIntensity: 0.22, side: THREE.DoubleSide, transparent: true, opacity: 0, depthWrite: true });
+        const material = new THREE.MeshPhysicalMaterial({ color, map: bladeTexture, vertexColors: true, metalness: 0.2, roughness: 0.76, clearcoat: 0, bumpMap: bladeTexture, bumpScale: 0.28, envMap: environment.texture, envMapIntensity: 0.22, side: THREE.DoubleSide, depthWrite: true });
         const mesh = new THREE.Mesh(geometry, material);
         irisAssembly.add(mesh);
         mesh.renderOrder = 5 + index;
@@ -663,7 +664,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
         });
       };
       state = {
-        renderer, scene, environment, camera, phone, frame, cameraMetal, detailMaterials, opticalGlass, opticalTexture, flashGlass, grain, bladeTexture, irisAssembly, irisBlades, irisOpen: 0, shutterRings, photos, materials, current: initial, animation: 0, disposed: false, render,
+        renderer, scene, environment, camera, phone, frame, cameraMetal, detailMaterials, opticalGlass, opticalTexture, flashGlass, grain, bladeTexture, irisAssembly, irisBlades, irisMotion: -1, shutterRings, photos, materials, current: initial, animation: 0, disposed: false, render,
         select(name) {
           if (name === this.current) return;
           if (this.animation) cancelAnimationFrame(this.animation);
