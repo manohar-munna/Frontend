@@ -17,7 +17,7 @@
 .opening-curtain.is-opening .curtain-left { transform: translateX(-101%); }
 .opening-curtain.is-opening .curtain-right { transform: translateX(101%); }
 
-.color-hero { height: 260svh; position: relative; isolation: isolate; overflow: clip; background: var(--hero-outer); color: var(--hero-ink); transition: color .7s; }
+.color-hero { height: 400svh; position: relative; isolation: isolate; overflow: clip; background: var(--hero-outer); color: var(--hero-ink); transition: color .7s; }
 .color-stage { position: sticky; top: 0; height: 100svh; overflow: hidden; }
 .story-anchor { position: absolute; top: 100svh; }
 .scroll-outer-wash { position: absolute; inset: 0; background: var(--hero-border-outer); pointer-events: none; }
@@ -72,9 +72,12 @@
 .scroll-scene-backdrop { position: absolute; inset: 0; background: radial-gradient(ellipse at 72% 43%,color-mix(in srgb,var(--hero-border-stage),var(--hero-glow) 28%) 0,var(--hero-border-stage) 54%,color-mix(in srgb,var(--hero-border-stage),#000 22%) 100%); }
 .scroll-scene-glow { position: absolute; width: 55%; aspect-ratio: 1; right: 2%; top: 7%; border-radius: 50%; background: radial-gradient(circle,color-mix(in srgb,var(--hero-glow) 28%,transparent),transparent 70%); }
 .scroll-copy { position: absolute; z-index: 3; left: 7.5%; top: 26%; width: 42%; will-change: transform,opacity; }
+.camera-copy { position: absolute; z-index: 3; right: 8%; top: 29%; width: 34%; will-change: transform,opacity; }
 .scroll-kicker { margin-bottom: 28px; font-size: 11px; font-weight: 650; letter-spacing: .24em; }
 .scroll-copy h2 { font-family: Georgia,"Times New Roman",serif; font-size: clamp(58px,6.1vw,104px); font-weight: 400; letter-spacing: -.075em; line-height: .99; }
+.camera-copy h2 { font-family: Georgia,"Times New Roman",serif; font-size: clamp(58px,6.1vw,104px); font-weight: 400; letter-spacing: -.075em; line-height: .99; }
 .scroll-copy h2 em { color: color-mix(in srgb,var(--hero-ink) 72%,var(--hero-glow)); font-weight: 400; }
+.camera-copy h2 em { color: color-mix(in srgb,var(--hero-ink) 72%,var(--hero-glow)); font-weight: 400; }
 .scroll-description { max-width: 350px; margin-top: 33px; color: color-mix(in srgb,var(--hero-ink) 82%,var(--hero-border-stage)); font-size: 16px; line-height: 1.55; }
 .scroll-rule { display: block; width: 95px; height: 1px; margin-top: 34px; background: currentColor; opacity: .55; }
 .design-placeholder { position: absolute; z-index: 1; top: 13%; right: 5%; width: 45%; height: 76%; padding: 23px 27px; display: flex; align-items: flex-end; justify-content: space-between; border: 1px solid color-mix(in srgb,var(--hero-ink) 28%,transparent); border-radius: 35px; box-shadow: inset 0 0 80px rgba(205,108,136,.04),0 24px 100px rgba(8,1,5,.15); font-size: 10px; font-weight: 600; letter-spacing: .2em; }
@@ -91,6 +94,7 @@
   .color-product-caption { top: 65%; font-size: 11px; }
   .color-heading { bottom: 6%; padding: 0 15px; }.color-heading h1 { font-size: clamp(36px,9vw,56px); }
   .scroll-copy { left: 8%; top: 14%; width: 84%; }.scroll-kicker { margin-bottom: 16px; font-size: 9px; }.scroll-copy h2 { font-size: clamp(45px,11vw,64px); }.scroll-description { margin-top: 17px; max-width: 290px; font-size: 12px; }.scroll-rule { margin-top: 18px; }
+  .camera-copy { top: 15%; right: 8%; width: 76%; }.camera-copy h2 { font-size: clamp(42px,10vw,60px); }
   .design-placeholder { left: 8%; right: 8%; top: 43%; width: 84%; height: 48%; padding: 15px; border-radius: 21px; font-size: 8px; }
 }
 @media(max-width:420px) { .color-product { width: 84vw; }.color-card { width: 88px; height: 88px; }.color-heading h1 { font-size: 35px; }.hero-rock { width: 170%; left: -35%; } }

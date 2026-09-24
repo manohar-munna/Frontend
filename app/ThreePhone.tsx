@@ -157,6 +157,37 @@ function finishTint(name: FinishName, kind: "side" | "front") {
   return new THREE.Color(kind === "side" ? finishes[name].frame : finishes[name].camera);
 }
 
+function makeAperture() {
+  return new THREE.ShaderMaterial({
+    uniforms: { uOpen: { value: 0 } },
+    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `
+      uniform float uOpen;
+      varying vec2 vUv;
+      void main() {
+        vec2 p = (vUv - 0.5) * 2.0;
+        float radius = length(p);
+        float angle = atan(p.y, p.x);
+        float blades = cos(angle * 6.0 + uOpen * 1.3);
+        float opening = mix(0.08, 0.57, uOpen);
+        float edge = opening + 0.018 * blades;
+        float pupil = 1.0 - smoothstep(edge - 0.055, edge + 0.03, radius);
+        float rim = exp(-pow((radius - edge) * 32.0, 2.0));
+        float reflection = exp(-length((p - vec2(-0.22, 0.28)) * vec2(2.0, 2.9)) * 9.0);
+        vec3 color = vec3(0.006, 0.01, 0.018);
+        color += vec3(0.035, 0.11, 0.16) * reflection;
+        color += vec3(0.09, 0.12, 0.16) * rim;
+        float alpha = uOpen * (pupil * 0.92 + rim * 0.28) * (1.0 - smoothstep(0.88, 0.98, radius));
+        gl_FragColor = vec4(color, alpha);
+        #include <colorspace_fragment>
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    toneMapped: false,
+  });
+}
+
 type ModelState = {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
@@ -164,6 +195,7 @@ type ModelState = {
   phone: THREE.Group;
   frame: THREE.MeshPhysicalMaterial;
   cameraMetal: THREE.MeshPhysicalMaterial;
+  aperture: THREE.ShaderMaterial;
   photos: Photos;
   materials: { kind: PhotoKind; material: THREE.ShaderMaterial }[];
   current: FinishName;
@@ -173,10 +205,24 @@ type ModelState = {
   select: (name: FinishName) => void;
 };
 
-export default function ThreePhone({ color, turn, onReady }: { color: string; turn: number; onReady?: (ready: boolean) => void }) {
+function setPhonePose(state: ModelState, turn: number, lensPhase: number) {
+  // Positive yaw brings the left edge and the camera cluster toward the viewer.
+  state.phone.rotation.y = THREE.MathUtils.degToRad(-34 * (1 - turn) + 15 * lensPhase);
+  state.phone.rotation.z = THREE.MathUtils.degToRad(5 * lensPhase);
+  const focusX = -160 * lensPhase;
+  const focusY = 420 * lensPhase;
+  state.camera.position.set(focusX, focusY, 2600);
+  state.camera.lookAt(focusX, focusY, 0);
+  state.camera.zoom = 1 + 1.32 * lensPhase;
+  state.camera.updateProjectionMatrix();
+  state.aperture.uniforms.uOpen.value = lensPhase;
+  state.render();
+}
+
+export default function ThreePhone({ color, turn, lensPhase, onReady }: { color: string; turn: number; lensPhase: number; onReady?: (ready: boolean) => void }) {
   const mountRef = useRef<HTMLDivElement>(null);
-  const latest = useRef({ color, turn });
-  latest.current = { color, turn };
+  const latest = useRef({ color, turn, lensPhase });
+  latest.current = { color, turn, lensPhase };
   const stateRef = useRef<ModelState | null>(null);
 
   useEffect(() => {
@@ -280,6 +326,11 @@ export default function ThreePhone({ color, turn, onReady }: { color: string; tu
         add(faceUvs(new THREE.CircleGeometry(58.5, 48), x, y), rearPhoto, x, y, D / 2 + 35);
       }
 
+      // The aperture sits above the photographic lens face by a full millimeter.
+      // It only becomes visible during the close-up, avoiding overlapping depth faces.
+      const aperture = makeAperture();
+      add(new THREE.CircleGeometry(43, 72), aperture, -170, 465, D / 2 + 36);
+
       // The reference deck already has a precisely aligned flash and dark
       // sensor. Extra disks doubled their outlines and overlapped the photo.
 
@@ -308,7 +359,7 @@ export default function ThreePhone({ color, turn, onReady }: { color: string; tu
         });
       };
       state = {
-        renderer, scene, camera, phone, frame, cameraMetal, photos, materials, current: initial, animation: 0, disposed: false, render,
+        renderer, scene, camera, phone, frame, cameraMetal, aperture, photos, materials, current: initial, animation: 0, disposed: false, render,
         select(name) {
           if (name === this.current) return;
           if (this.animation) cancelAnimationFrame(this.animation);
@@ -353,8 +404,7 @@ export default function ThreePhone({ color, turn, onReady }: { color: string; tu
       container.dataset.ready = "true";
       onReady?.(true);
       if (latest.current.color !== initial) state.select(latest.current.color as FinishName);
-      state.phone.rotation.y = THREE.MathUtils.degToRad(-34 * (1 - latest.current.turn));
-      render();
+      setPhonePose(state, latest.current.turn, latest.current.lensPhase);
       state.scene.userData.resizeObserver = resizeObserver;
     }
     start().catch((error) => {
@@ -375,6 +425,7 @@ export default function ThreePhone({ color, turn, onReady }: { color: string; tu
         for (const { material } of state.materials) material.dispose();
         state.frame.dispose();
         state.cameraMetal.dispose();
+        state.aperture.dispose();
         for (const texture of [...Object.values(state.photos.rear), state.photos.side, state.photos.front]) texture.dispose();
       }
       stateRef.current = null;
@@ -391,9 +442,8 @@ export default function ThreePhone({ color, turn, onReady }: { color: string; tu
   useEffect(() => {
     const state = stateRef.current;
     if (!state) return;
-    state.phone.rotation.y = THREE.MathUtils.degToRad(-34 * (1 - turn));
-    state.render();
-  }, [turn]);
+    setPhonePose(state, turn, lensPhase);
+  }, [turn, lensPhase]);
 
   return <div ref={mountRef} className="three-phone" aria-hidden="true" />;
 }

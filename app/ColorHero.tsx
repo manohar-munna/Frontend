@@ -18,6 +18,7 @@ const WHEEL_DURATION = 3200;
 const ENTRANCE_TRAVEL = 2;
 
 const mix = (from: number, to: number, progress: number) => from + (to - from) * progress;
+const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 const smoothstep = (progress: number) => progress * progress * (3 - 2 * progress);
 
 function WelcomeLettering() {
@@ -204,7 +205,7 @@ export default function ColorHero() {
     }, 1330);
   }, []);
 
-  const carouselVisible = scrollProgress <= 0.04;
+  const carouselVisible = scrollProgress <= 0.04 * 0.54;
   useEffect(() => {
     if (!entranceDone || !autoPlay || !carouselVisible) return;
     const tick = () => {
@@ -238,23 +239,29 @@ export default function ColorHero() {
 
   const theme = colors[active];
   const base = colors[baseIndex];
-  const reveal = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.06) / 0.34)));
-  const motion = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.13) / 0.74)));
-  const storyOpacity = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.2) / 0.28)));
-  const companionExit = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.045) / 0.26)));
-  const railOpacity = 1 - smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.01) / 0.1)));
+  const phaseOne = clamp01(scrollProgress / 0.54);
+  const lensPhase = smoothstep(clamp01((scrollProgress - 0.54) / 0.4));
+  const lensReveal = smoothstep(clamp01((lensPhase - 0.05) / 0.28));
+  const reveal = smoothstep(clamp01((phaseOne - 0.06) / 0.34));
+  const motion = smoothstep(clamp01((phaseOne - 0.13) / 0.74));
+  const storyOpacity = smoothstep(clamp01((phaseOne - 0.2) / 0.28));
+  const companionExit = smoothstep(clamp01((phaseOne - 0.045) / 0.26));
+  const railOpacity = 1 - smoothstep(clamp01((phaseOne - 0.01) / 0.1));
   const mobile = panelSize.width < 670;
   // The 3D rear remains the same object from the opening pose through the turn.
   const assetScale = Math.min(productSize.width / 1200, productSize.height / 1310);
   const artWidth = 1200 * assetScale;
   const artHeight = 1310 * assetScale;
   const endScale = panelSize.height * (mobile ? 0.37 : 0.66) / (artHeight * (1136 / 1310));
-  const productScale = mix(1, endScale, motion);
+  const baseScale = mix(1, endScale, motion);
+  const productScale = baseScale * mix(1, mobile ? 1.12 : 1.28, lensPhase);
   const shift = panelSize.width * (mobile ? 0.03 : 0.225) * motion
-    + artWidth * 0.15 * (productScale - 1 + motion);
+    + artWidth * 0.15 * (baseScale - 1 + motion)
+    - panelSize.width * (mobile ? 0.36 : 0.55) * lensPhase;
   const topBase = mobile ? 40 : 41;
-  const topShift = panelSize.height * (mix(topBase, mobile ? 65 : 49, motion) - topBase) / 100;
-  const turn = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.29) / 0.6)));
+  const topShift = panelSize.height * (mix(topBase, mobile ? 65 : 49, motion) - topBase) / 100
+    - panelSize.height * (mobile ? 0.1 : 0) * lensPhase;
+  const turn = smoothstep(clamp01((phaseOne - 0.29) / 0.6));
   const railCards = useMemo(() => mounted && Array.from({ length: COUNT * 5 }, (_, index) => START - COUNT * 2 + index).map((virtualIndex) => {
     const travel = ENTRANCE_TRAVEL * (1 - smoothstep(wheelProgress));
     const arcPosition = position - travel;
@@ -367,7 +374,7 @@ export default function ColorHero() {
                 </div>
               ))}
               <div className="three-phone-layer" style={{ opacity: modelReady ? 1 : 0 }}>
-                <ThreePhone color={theme.name} turn={turn} onReady={handleModelReady} />
+                <ThreePhone color={theme.name} turn={turn} lensPhase={lensPhase} onReady={handleModelReady} />
               </div>
             </div>
           </div>
@@ -376,14 +383,20 @@ export default function ColorHero() {
           <div className="scroll-scene" aria-hidden={storyOpacity < 0.75}>
             <div className="scroll-scene-backdrop" style={{ opacity: storyOpacity }} />
             <div className="scroll-scene-glow" style={{ opacity: storyOpacity }} />
-            <div className="scroll-copy" style={{ opacity: smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.4) / 0.35))), transform: `translateY(${Number(((1 - motion) * 42).toFixed(2))}px)` }}>
+            <div className="scroll-copy" style={{ opacity: smoothstep(clamp01((phaseOne - 0.4) / 0.35)) * (1 - lensReveal), transform: `translateY(${Number(((1 - motion) * 42).toFixed(2))}px)` }}>
               <p className="scroll-kicker">01 / THE FORM</p>
               <h2>Every angle,<br /><em>considered.</em></h2>
               <p className="scroll-description">A new perspective on the finish that defines the Pro.</p>
               <span className="scroll-rule" />
             </div>
-            <div className="design-placeholder" style={{ opacity: smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.34) / 0.4))) }}>
+            <div className="design-placeholder" style={{ opacity: smoothstep(clamp01((phaseOne - 0.34) / 0.4)) * (1 - lensReveal) }}>
               <span>{theme.name.toUpperCase()}</span><span>18 / PRO</span>
+            </div>
+            <div className="camera-copy" style={{ opacity: smoothstep(clamp01((lensPhase - 0.32) / 0.42)), transform: `translateY(${Number(((1 - lensPhase) * 28).toFixed(2))}px)` }}>
+              <p className="scroll-kicker">02 / THE CAMERA</p>
+              <h2>Look<br /><em>closer.</em></h2>
+              <p className="scroll-description">The detail is in the lens.</p>
+              <span className="scroll-rule" />
             </div>
           </div>
         </div>
