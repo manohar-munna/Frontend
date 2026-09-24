@@ -28,6 +28,7 @@ function WelcomeLettering() {
 }
 
 export default function ColorHero() {
+  const heroRef = useRef<HTMLElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const positionRef = useRef(START);
   const activeRef = useRef(0);
@@ -51,6 +52,43 @@ export default function ColorHero() {
   const [entranceDone, setEntranceDone] = useState(false);
   const [autoPlay, setAutoPlay] = useState(true);
   const [autoplayEpoch, setAutoplayEpoch] = useState(0);
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  useEffect(() => {
+    let frame = 0;
+    let current = 0;
+    let target = 0;
+    let lastTime = 0;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const animate = (now: number) => {
+      const elapsed = Math.min(64, lastTime ? now - lastTime : 16);
+      lastTime = now;
+      current += (target - current) * (1 - Math.exp(-elapsed / 140));
+      if (Math.abs(target - current) < 0.0001) current = target;
+      setScrollProgress(current);
+      frame = current === target ? 0 : requestAnimationFrame(animate);
+    };
+    const measure = () => {
+      const hero = heroRef.current;
+      if (!hero) return;
+      const distance = Math.max(1, hero.offsetHeight - window.innerHeight);
+      target = Math.max(0, Math.min(1, -hero.getBoundingClientRect().top / distance));
+      if (reducedMotion) {
+        setScrollProgress(target);
+      } else if (!frame) {
+        lastTime = 0;
+        frame = requestAnimationFrame(animate);
+      }
+    };
+    measure();
+    window.addEventListener("scroll", measure, { passive: true });
+    window.addEventListener("resize", measure);
+    return () => {
+      window.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", measure);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -58,6 +96,7 @@ export default function ColorHero() {
     if (reduceMotion) {
       setIntroDone(true);
       setSceneReady(true);
+      setWheelStarted(true);
       setWheelProgress(1);
       setEntranceDone(true);
       setAutoPlay(false);
@@ -75,7 +114,7 @@ export default function ColorHero() {
   }, []);
 
   useEffect(() => {
-    if (!wheelStarted) return;
+    if (!wheelStarted || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     let frame = 0;
     let startedAt: number | null = null;
     const animate = (now: number) => {
@@ -127,8 +166,9 @@ export default function ColorHero() {
     }, 1330);
   }, []);
 
+  const carouselVisible = scrollProgress <= 0.04;
   useEffect(() => {
-    if (!entranceDone || !autoPlay) return;
+    if (!entranceDone || !autoPlay || !carouselVisible) return;
     const tick = () => {
       if (document.visibilityState === "visible" && panelRef.current && panelRef.current.getBoundingClientRect().bottom > 0) advance(1);
       autoAdvanceTimer.current = setTimeout(tick, 3200);
@@ -138,7 +178,7 @@ export default function ColorHero() {
       if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
       autoAdvanceTimer.current = null;
     };
-  }, [advance, entranceDone, autoPlay, autoplayEpoch]);
+  }, [advance, entranceDone, autoPlay, autoplayEpoch, carouselVisible]);
 
   const selectCard = (distance: number) => {
     if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
@@ -160,14 +200,23 @@ export default function ColorHero() {
 
   const theme = colors[active];
   const base = colors[baseIndex];
+  const reveal = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.06) / 0.34)));
+  const motion = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.13) / 0.74)));
+  const storyOpacity = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.2) / 0.28)));
+  const pairOpacity = 1 - smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.22) / 0.16)));
+  const railOpacity = 1 - smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.01) / 0.1)));
+  const shift = panelSize.width * (panelSize.width < 670 ? 0.03 : 0.225) * motion;
+  const phoneShift = shift - panelSize.width * 0.05 * (1 - motion);
+  const phoneTop = mix(panelSize.width < 670 ? 40 : 41, panelSize.width < 670 ? 65 : 49, motion);
+  const phoneHeight = mix(panelSize.width < 670 ? 55 : 66, panelSize.width < 670 ? 37 : 66, motion);
   useEffect(() => {
     document.documentElement.style.setProperty("--header-ink", theme.ink);
   }, [theme.ink]);
   const themeStyle = {
     "--hero-outer": base.outer,
     "--hero-stage": base.stage,
-    "--hero-border-stage": theme.stage,
-    "--hero-border-outer": theme.outer,
+    "--hero-border-stage": `color-mix(in srgb, ${theme.stage}, ${colors[0].stage} ${storyOpacity * 100}%)`,
+    "--hero-border-outer": `color-mix(in srgb, ${theme.outer}, ${colors[0].outer} ${storyOpacity * 100}%)`,
     "--hero-glow": theme.glow,
     "--hero-ink": theme.ink,
   } as CSSProperties;
@@ -182,12 +231,15 @@ export default function ColorHero() {
           <span className="curtain-word"><WelcomeLettering /></span>
         </div>
       )}
-      <section id="top" className={`reel-hero color-hero ${sceneReady ? "scene-ready" : ""} ${entranceDone ? "entrance-complete" : ""}`} style={themeStyle} aria-label="Explore iPhone 18 Pro colors">
-        {ripple && <div key={`outer-${ripple.key}`} className="hero-ripple hero-ripple-outer" style={{ backgroundColor: colors[ripple.index].outer }} />}
-        <div ref={panelRef} className="reel-panel color-panel">
+      <section ref={heroRef} id="top" className={`reel-hero color-hero ${sceneReady ? "scene-ready" : ""} ${entranceDone ? "entrance-complete" : ""} ${scrollProgress > 0.001 ? "is-scrolling" : ""}`} style={themeStyle} aria-label="Explore iPhone 18 Pro colors and design">
+        <span id="story" className="story-anchor" aria-hidden="true" />
+        <div className="color-stage">
+          {ripple && <div key={`outer-${ripple.key}`} className="hero-ripple hero-ripple-outer" style={{ backgroundColor: colors[ripple.index].outer }} />}
+          <div className="scroll-outer-wash" style={{ opacity: storyOpacity }} />
+          <div ref={panelRef} className="reel-panel color-panel">
           {ripple && <div key={`stage-${ripple.key}`} className="hero-ripple hero-ripple-stage" style={{ backgroundColor: colors[ripple.index].stage }} />}
           <div className="color-glow" />
-          <div className="reel-panel-top">
+          <div className="reel-panel-top" style={{ opacity: 1 - reveal }}>
             <span className="color-count">0{active + 1} <span>/ 0{COUNT}</span></span>
           </div>
 
@@ -209,8 +261,8 @@ export default function ColorHero() {
               const xOffset = `${x < 0 ? "-" : "+"} ${Number(Math.abs(x).toFixed(3))}px`;
               const style = {
                 transform: `translate3d(calc(-50% ${xOffset}), ${Number(y.toFixed(3))}px, 0px) rotate(${Number(rotation.toFixed(3))}deg) scale(${Number(scale.toFixed(4))})`,
-                opacity: wheelStarted ? Math.min(1, wheelProgress * 3) * Math.max(0, Math.min(1, 3 - distance)) : 0,
-                pointerEvents: entranceDone && Math.abs(relative) <= 2 ? "auto" : "none",
+                opacity: wheelStarted ? Math.min(1, wheelProgress * 3) * Math.max(0, Math.min(1, 3 - distance)) * railOpacity : 0,
+                pointerEvents: entranceDone && scrollProgress < 0.04 && Math.abs(relative) <= 2 ? "auto" : "none",
               } as CSSProperties;
               return (
                 <button
@@ -223,8 +275,8 @@ export default function ColorHero() {
                     if (event.target === event.currentTarget && event.propertyName === "transform") normalize();
                   }}
                   aria-label={`Show ${color.name} iPhone`}
-                  aria-hidden={!entranceDone || Math.abs(relative) > 2}
-                  tabIndex={!entranceDone || Math.abs(relative) > 2 ? -1 : 0}
+                  aria-hidden={!entranceDone || !carouselVisible || Math.abs(relative) > 2}
+                  tabIndex={!entranceDone || !carouselVisible || Math.abs(relative) > 2 ? -1 : 0}
                 >
                   <Image src={color.image} alt="" fill loading="eager" sizes="(max-width: 700px) 110px, 180px" />
                   <span>{color.name}</span>
@@ -233,8 +285,8 @@ export default function ColorHero() {
             })}
           </div>
 
-          <div className="hero-rock" aria-hidden="true"><Image src="/assets/moss-rock.png" alt="" fill priority sizes="(max-width: 700px) 100vw, 85vw" /></div>
-          <div className="color-product" aria-live="polite">
+          <div className="hero-rock" aria-hidden="true" style={sceneReady ? { opacity: 1 - reveal } : undefined}><Image src="/assets/moss-rock.png" alt="" fill priority sizes="(max-width: 700px) 100vw, 85vw" /></div>
+          <div className="color-product" aria-live="polite" style={sceneReady ? { opacity: pairOpacity, transform: `translate(calc(-50% + ${Number(shift.toFixed(2))}px), -50%) scale(${Number((1 - motion * 0.17).toFixed(4))})` } : undefined}>
             {colors.map((color, index) => (
               <Image
                 key={color.name}
@@ -247,8 +299,31 @@ export default function ColorHero() {
               />
             ))}
           </div>
-          {entranceDone && <div className="color-product-caption" key={theme.name}>{theme.name}</div>}
-          <div className="color-heading"><h1>Choose your perspective.</h1></div>
+          {entranceDone && <div className="color-product-caption" key={theme.name} style={{ opacity: 1 - reveal, animation: reveal > 0 ? "none" : undefined }}>{theme.name}</div>}
+          <div className="color-heading" style={{ opacity: 1 - reveal }}><h1>Choose your perspective.</h1></div>
+          <div className="scroll-scene" aria-hidden={storyOpacity < 0.75}>
+            <div className="scroll-scene-backdrop" style={{ opacity: storyOpacity }} />
+            <div className="scroll-scene-glow" style={{ opacity: storyOpacity }} />
+            <div className="scroll-copy" style={{ opacity: smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.4) / 0.35))), transform: `translateY(${Number(((1 - motion) * 42).toFixed(2))}px)` }}>
+              <p className="scroll-kicker">01 / THE FORM</p>
+              <h2>Every angle,<br /><em>considered.</em></h2>
+              <p className="scroll-description">A new perspective on the finish that defines the Pro.</p>
+              <span className="scroll-rule" />
+            </div>
+            <div className="design-placeholder" style={{ opacity: smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.34) / 0.4))) }}>
+              <span>BURGUNDY</span><span>18 / PRO</span>
+            </div>
+            <div className="scroll-phone-position" style={{ top: `${phoneTop}%`, height: `${phoneHeight}%`, transform: `translate3d(calc(-50% + ${Number(phoneShift.toFixed(2))}px), -50%, 0)`, opacity: smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.11) / 0.05))) }}>
+              <div className="scroll-phone-object" role="img" aria-label="Burgundy iPhone rear rotating into its display" style={{ transform: `rotateY(${Number((144 + motion * 58).toFixed(2))}deg) rotateZ(${Number((motion * 4).toFixed(2))}deg)` }}>
+                <div className="scroll-phone-core" />
+                <div className="scroll-phone-edge scroll-phone-edge-left" />
+                <div className="scroll-phone-edge scroll-phone-edge-right" />
+                <div className="scroll-phone-face scroll-phone-front"><Image src="/assets/iphone-burgundy-front-3d.png" alt="" fill priority sizes="(max-width: 700px) 60vw, 30vw" /></div>
+                <div className="scroll-phone-face scroll-phone-back"><Image src="/assets/iphone-burgundy-back-3d.png" alt="" fill priority sizes="(max-width: 700px) 60vw, 30vw" /></div>
+              </div>
+            </div>
+          </div>
+        </div>
         </div>
       </section>
     </>
