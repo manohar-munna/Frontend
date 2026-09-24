@@ -53,6 +53,9 @@
 .product-main { z-index: 3; }
 .product-rail { z-index: 2; }
 .product-companion { z-index: 1; }
+.product-rear-render { position: absolute; z-index: 4; inset: 0; will-change: opacity; }
+.rear-image-plane { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+.product-rear-render img { object-fit: fill!important; }
 /* Complementary masks on the same source canvas preserve the exact hero pose. */
 .phone-surface-masks { position: absolute; }
 .product-main .product-layer-source { clip-path: url(#phone-rear-surface); }
