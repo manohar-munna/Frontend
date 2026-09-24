@@ -2,14 +2,14 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
-import { phoneAssetPerspective, phonePerspective } from "./phone-perspective";
+import ThreePhone from "./ThreePhone";
 
 const colors = [
-  { name: "Burgundy", image: "/assets/iphone-burgundy.png", rear: "/assets/iphone-rear-burgundy-v2.png", rearBounds: [200, 126, 825, 1406], outer: "#672738", stage: "#2c101c", glow: "#8e3951", ink: "#fff4f1" },
-  { name: "Pearl", image: "/assets/iphone-pearl.png", rear: "/assets/iphone-rear-pearl-v2.png", rearBounds: [193, 92, 832, 1428], outer: "#d6d0ca", stage: "#b9b2ac", glow: "#f2eee8", ink: "#2d2527" },
-  { name: "Graphite", image: "/assets/iphone-pair.png", rear: "/assets/iphone-rear-graphite-v2.png", rearBounds: [200, 126, 825, 1407], outer: "#57585a", stage: "#202124", glow: "#67696a", ink: "#f8f7f3" },
-  { name: "Sage", image: "/assets/iphone-sage.png", rear: "/assets/iphone-rear-sage-v2.png", rearBounds: [200, 125, 827, 1408], outer: "#718579", stage: "#243e34", glow: "#5b806d", ink: "#f4f7f1" },
-  { name: "Midnight", image: "/assets/iphone-midnight.png", rear: "/assets/iphone-rear-midnight-v2.png", rearBounds: [199, 125, 826, 1407], outer: "#344c70", stage: "#10233f", glow: "#315b91", ink: "#f2f6ff" },
+  { name: "Burgundy", image: "/assets/iphone-burgundy.png", outer: "#672738", stage: "#2c101c", glow: "#8e3951", ink: "#fff4f1" },
+  { name: "Pearl", image: "/assets/iphone-pearl.png", outer: "#d6d0ca", stage: "#b9b2ac", glow: "#f2eee8", ink: "#2d2527" },
+  { name: "Graphite", image: "/assets/iphone-pair.png", outer: "#57585a", stage: "#202124", glow: "#67696a", ink: "#f8f7f3" },
+  { name: "Sage", image: "/assets/iphone-sage.png", outer: "#718579", stage: "#243e34", glow: "#5b806d", ink: "#f4f7f1" },
+  { name: "Midnight", image: "/assets/iphone-midnight.png", outer: "#344c70", stage: "#10233f", glow: "#315b91", ink: "#f2f6ff" },
 ] as const;
 
 const COUNT = colors.length;
@@ -229,11 +229,10 @@ export default function ColorHero() {
   const reveal = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.06) / 0.34)));
   const motion = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.13) / 0.74)));
   const storyOpacity = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.2) / 0.28)));
-  const companionExit = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.045) / 0.34)));
+  const companionExit = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.045) / 0.26)));
   const railOpacity = 1 - smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.01) / 0.1)));
   const mobile = panelSize.width < 670;
-  // Keep the original pair aligned through the start of the turn. The clean
-  // rear render takes over only after the screen-facing phone has gone.
+  // Handoff to the model before its turn, while the companion phone exits.
   const assetScale = Math.min(productSize.width / 1200, productSize.height / 1310);
   const artWidth = 1200 * assetScale;
   const artHeight = 1310 * assetScale;
@@ -242,10 +241,9 @@ export default function ColorHero() {
   const shift = panelSize.width * (mobile ? 0.03 : 0.225) * motion
     + artWidth * 0.15 * (productScale - 1 + motion);
   const phoneTop = mix(mobile ? 40 : 41, mobile ? 65 : 49, motion);
-  const turn = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.22) / 0.67)));
-  const perspective = phonePerspective(turn, assetScale);
-  const rearReveal = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.12) / 0.12)));
-  const sourceFade = 1 - smoothstep(Math.max(0, Math.min(1, (rearReveal - 0.8) / 0.2)));
+  const turn = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.35) / 0.54)));
+  const modelReveal = smoothstep(Math.max(0, Math.min(1, (scrollProgress - 0.29) / 0.06)));
+  const sourceFade = 1 - modelReveal;
   useEffect(() => {
     document.documentElement.style.setProperty("--header-ink", theme.ink);
   }, [theme.ink]);
@@ -340,7 +338,6 @@ export default function ColorHero() {
                   opacity: 1 - companionExit,
                   transform: `translate3d(${-artWidth * 0.3 * companionExit}px, ${artHeight * 0.015 * companionExit}px, 0)`,
                 } : {
-                  transform: part === "main" ? perspective.rear : perspective.rail,
                   opacity: sourceFade,
                 }}>
                   <div className="product-layer-source">
@@ -359,22 +356,8 @@ export default function ColorHero() {
                   </div>
                 </div>
               ))}
-              <div className="product-rear-render" style={{ opacity: rearReveal }}>
-                {colors.map((color, index) => {
-                  return (
-                    <div key={color.name} className="rear-image-plane" style={{ width: 1024 * assetScale, height: 1536 * assetScale, transform: phoneAssetPerspective(turn, assetScale, color.rearBounds) }}>
-                      <Image
-                        src={color.rear}
-                        alt=""
-                        fill
-                        quality={95}
-                        loading="eager"
-                        sizes="(max-width: 700px) 75vw, 38vw"
-                        className={index === active ? "visible" : index === outgoing ? "outgoing" : ""}
-                      />
-                    </div>
-                  );
-                })}
+              <div className="three-phone-layer" style={{ opacity: modelReveal }}>
+                <ThreePhone color={theme.name} turn={turn} />
               </div>
             </div>
           </div>
