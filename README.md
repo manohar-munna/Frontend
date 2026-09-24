@@ -15,8 +15,8 @@ Open [http://localhost:3000](http://localhost:3000).
 
 - A burgundy curtain opens after connected welcome lettering draws and fades. The rock and main phone rise into view, followed by a 3.2-second carousel entrance that travels two card positions into a five-card arch.
 - Five phone colors autoplay around a continuous arch with two distinct cards on each side. Each change crossfades the phone and sends a soft ripple from its center; cards can also be selected directly.
-- The hero stays pinned during scrolling. The carousel clears, a detailed burgundy rear render takes over, and the phone moves right while rotating into its display frame. Scrolling back reverses the sequence.
-- The phone uses separate generated front and back textures, a body and side faces, and CSS perspective for a layered 3D object. It is not a downloadable mesh model.
+- The hero stays pinned during scrolling. Both phones retain the selected finish. The screen-facing phone slides left and fades behind the main phone, which moves right and turns into its display frame. Scrolling back reverses the sequence.
+- The pair is split into complementary CSS masks on a shared image canvas. The same main-phone layer stays visible throughout, avoiding a render swap or doubled edges. Its turn uses CSS perspective on the original artwork, rather than a mesh model.
 - The layout stacks on smaller screens. Autoplay pauses during the scroll presentation and resumes when returning to the hero.
 - Reduced-motion preferences are respected.
 
