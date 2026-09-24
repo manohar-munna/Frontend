@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { phonePerspective } from "./phone-perspective";
 
 const colors = [
@@ -56,6 +56,24 @@ export default function ColorHero() {
   const [autoPlay, setAutoPlay] = useState(true);
   const [autoplayEpoch, setAutoplayEpoch] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
+
+  useLayoutEffect(() => {
+    const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+    if (navigation?.type !== "reload") return;
+
+    const previousRestoration = history.scrollRestoration;
+    history.scrollRestoration = "manual";
+    const resetScroll = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      setScrollProgress(0);
+    };
+    resetScroll();
+    window.addEventListener("pageshow", resetScroll);
+    return () => {
+      window.removeEventListener("pageshow", resetScroll);
+      history.scrollRestoration = previousRestoration;
+    };
+  }, []);
 
   useEffect(() => {
     let frame = 0;
