@@ -13,11 +13,11 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Interactions
 
-- A burgundy curtain opens after the connected welcome lettering draws as one slow stroke and fades. A center seam appears, the curtains part, then the rock and main phone rise into view. The repeated color carousel then rotates as a large wheel, mostly outside the frame, while growing into a five-card arch.
+- A burgundy curtain opens after connected welcome lettering draws and fades. The rock and main phone rise into view, followed by a 3.2-second carousel entrance that travels two card positions into a five-card arch.
 - Five phone colors autoplay around a continuous arch with two distinct cards on each side. Each change crossfades the phone and sends a soft ripple from its center; cards can also be selected directly.
-- The camera section changes composition as the page scrolls.
-- Finish controls show dedicated transparent phone renders for each color.
-- Navigation and layouts adapt to smaller screens.
+- The hero stays pinned during scrolling. The carousel clears, a detailed burgundy rear render takes over, and the phone moves right while rotating into its display frame. Scrolling back reverses the sequence.
+- The phone uses separate generated front and back textures, a body and side faces, and CSS perspective for a layered 3D object. It is not a downloadable mesh model.
+- The layout stacks on smaller screens. Autoplay pauses during the scroll presentation and resumes when returning to the hero.
 - Reduced-motion preferences are respected.
 
-The three original concept boards are in `design-concepts/`. The five phone renders and main mossy rock in `public/assets/` are standalone transparent PNGs; the lettering, cards, arch, and stage are built in SVG/CSS.
+The original concept boards are in `design-concepts/`. The final scroll composition is in [design/scroll-final.png](design/scroll-final.png), with sequence notes in [design/README.md](design/README.md). Phone renders and the mossy rock in `public/assets/` are transparent PNGs; lettering, cards, arch, and stage are built in SVG/CSS. The former overview, camera, finishes, and footer sections have been removed.
