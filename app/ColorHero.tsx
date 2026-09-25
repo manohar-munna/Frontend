@@ -398,7 +398,7 @@ export default function ColorHero() {
                   </div>
                 </div>
               ))}
-              <div className="three-phone-layer" style={{ opacity: modelReady ? 1 : 0, width: "300%", height: "300%", left: "-100%", top: "-100%" }}>
+              <div className="three-phone-layer" style={{ opacity: modelReady ? 1 : 0, width: "500%", height: "300%", left: "-200%", top: "-100%" }}>
                 <ThreePhone color={theme.name} turn={turn} lensPhase={lensPhase} shutterPhase={shutterPhase} apertureOpen={apertureOpen} scenePeek={scenePeek} lensTravel={lensTravel} sceneExpansion={sceneExpansion} compact={mobile} onReady={handleModelReady} />
               </div>
             </div>

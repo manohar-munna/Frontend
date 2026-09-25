@@ -34,6 +34,17 @@ export function createSkateOptics(images: HTMLImageElement[], cityTexture: THREE
     context.drawImage(rider, left, top, subjectWidth, subjectWidth * 1.5);
     texture.needsUpdate = true;
   };
+  // A convex glass cap, recessed below the blade faces. The preview is mapped
+  // through its spherical coordinates, rather than pasted onto a flat circle.
+  const geometry = new THREE.SphereGeometry(16.5, 192, 64, 0, Math.PI * 2, 0, Math.PI / 2);
+  geometry.rotateX(Math.PI / 2);
+  const vertices = geometry.getAttribute("position");
+  const uv = geometry.getAttribute("uv");
+  for (let i = 0; i < vertices.count; i++) {
+    uv.setXY(i, vertices.getX(i) / 33 + 0.5, vertices.getY(i) / 33 + 0.5);
+    vertices.setZ(i, vertices.getZ(i) * (1.7 / 16.5));
+  }
+  geometry.computeVertexNormals();
   const material = new THREE.ShaderMaterial({
     uniforms: {
       uPhoto: { value: texture },
@@ -55,9 +66,17 @@ export function createSkateOptics(images: HTMLImageElement[], cityTexture: THREE
         vec2 panel = uCanvasRect.xy + screen * uCanvasRect.zw;
         // The preview stays fixed in lens coordinates during the entire dive.
         // Only after the pupil surrounds the viewport do we enter the scene.
-        vec2 previewPhoto = (vec2(vUv.x, 1. - vUv.y) - .5) / (uPreviewScale * vec2(uPanelSize.x / uPanelSize.y, 1.)) + .5;
+        vec2 p = (vUv - .5) * 2.;
+        float r2 = min(dot(p, p), 1.);
+        float spherical = 1. - smoothstep(0., .9, uExpansion);
+        // Radial compression and off-axis refraction bend the skyline and
+        // skater together across the glass, strongest at the curved shoulder.
+        vec2 bent = p * (.64 + .36 * r2);
+        bent.y += .22 * p.x * p.x * (1. - p.y * p.y);
+        vec2 lensUv = bent * .5 + .5;
+        vec2 previewPhoto = (vec2(lensUv.x, 1. - lensUv.y) - .5) / (uPreviewScale * vec2(uPanelSize.x / uPanelSize.y, 1.)) + .5;
         vec2 photo = mix(previewPhoto, panel / uPanelSize, uExpansion);
-        vec2 backgroundUv = mix(vUv, vec2(panel.x / uPanelSize.x, 1. - panel.y / uPanelSize.y), uExpansion);
+        vec2 backgroundUv = mix(lensUv, vec2(panel.x / uPanelSize.x, 1. - panel.y / uPanelSize.y), uExpansion);
         float frameAspect = mix(1., uPanelSize.x / uPanelSize.y, uExpansion);
         vec2 cover = vec2(min(1., frameAspect / uCityAspect), min(1., uCityAspect / frameAspect));
         backgroundUv = (backgroundUv - .5) * cover + .5;
@@ -65,11 +84,30 @@ export function createSkateOptics(images: HTMLImageElement[], cityTexture: THREE
         vec4 foreground = texture2D(uPhoto, vec2(photo.x, 1. - photo.y));
         float inside = step(0., photo.x) * step(0., photo.y) * step(photo.x, 1.) * step(photo.y, 1.);
         vec3 color = mix(background, foreground.rgb, foreground.a * inside);
-        float glassShade = mix(.82 + .18 * (1. - pow(length(vUv - .5) * 2., 3.)), 1., uExpansion);
-        gl_FragColor = vec4(color * glassShade, uReveal);
+        // Fresnel falloff, a broad softbox crescent, and a muted purple
+        // return reflection give the glass thickness without washing it out.
+        vec3 glassNormal = normalize(vec3(p * .94, sqrt(max(.001, 1. - r2 * .8836))));
+        float shoulder = smoothstep(.55, 1., sqrt(r2));
+        float transmission = (.38 + .62 * pow(glassNormal.z, .65)) * (1. - .42 * shoulder);
+        // The same off-axis source catches successive glass shoulders. Keep
+        // the centre clear, with localized coating reflections on the edges.
+        float radius = sqrt(r2);
+        float keySide = exp(-pow((p.x + .66) * 4.5, 2.) - pow((p.y - .57) * 4.5, 2.));
+        float returnSide = exp(-pow((p.x - .81) * 6., 2.) - pow((p.y + .28) * 4.5, 2.));
+        float crescent = exp(-pow((radius - .91) * 27., 2.));
+        float innerReturn = exp(-pow((radius - .77) * 32., 2.));
+        float rim = crescent + .32 * innerReturn;
+        vec3 reflection = rim * (vec3(.68, .40, .19) * keySide + vec3(.31, .12, .39) * returnSide);
+        reflection += vec3(.72, .60, .48) * keySide * .22
+          + vec3(.14, .06, .23) * returnSide * .18;
+        color = color * mix(1., transmission, spherical) + reflection * spherical;
+        // The photograph disappears into the dark glass shoulder instead of
+        // leaving a hard circular decal edge over the original optical layer.
+        float glassEdge = mix(1., 1. - smoothstep(.89, 1., radius), spherical);
+        gl_FragColor = vec4(color, uReveal * glassEdge);
         #include <colorspace_fragment>
       }`,
     transparent: true, depthWrite: false, depthTest: true, toneMapped: false,
   });
-  return { material, texture, paint };
+  return { material, texture, geometry, paint };
 }

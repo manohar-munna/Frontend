@@ -409,7 +409,11 @@ function clipIrisMaterial(material: THREE.Material, bladeOffset: THREE.Vector2) 
 
 function makeOpticalGlass(texture: THREE.Texture) {
   const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0, depthWrite: false, toneMapped: false });
+  const sceneReveal = { value: 0 };
+  material.userData.sceneReveal = sceneReveal;
   material.onBeforeCompile = (shader) => {
+    shader.uniforms.uSceneReveal = sceneReveal;
+    shader.fragmentShader = shader.fragmentShader.replace("void main() {", "uniform float uSceneReveal; void main() {");
     shader.fragmentShader = shader.fragmentShader.replace("#include <map_fragment>", `
       #include <map_fragment>
       // Reflections belong to the curved glass shoulder, outside the image.
@@ -419,6 +423,13 @@ function makeOpticalGlass(texture: THREE.Texture) {
       float softbox = exp(-pow((glassPoint.y + .36 * glassPoint.x - .72) * 15., 2.));
       float returnLight = exp(-pow((glassPoint.y + .28 * glassPoint.x + .76) * 20., 2.));
       diffuseColor.rgb += shoulder * (vec3(.31, .29, .27) * softbox + vec3(.10, .085, .18) * returnLight);
+      // Warm and violet reflections continue over the existing recessed
+      // optic, outside the photo. No extra ring meshes or screen overlay.
+      float keySide = exp(-pow((glassPoint.x + .66) * 4.5, 2.) - pow((glassPoint.y - .57) * 4.5, 2.));
+      float returnSide = exp(-pow((glassPoint.x - .81) * 6., 2.) - pow((glassPoint.y + .28) * 4.5, 2.));
+      float coating = exp(-pow((glassRadius - .87) * 26., 2.)) + .35 * exp(-pow((glassRadius - .96) * 45., 2.));
+      diffuseColor.rgb += uSceneReveal * shoulder * (coating + .22)
+        * (vec3(.95, .58, .27) * keySide + vec3(.50, .18, .66) * returnSide);
     `);
   };
   return material;
@@ -521,7 +532,7 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
   // Keep useful depth precision at every scale. A fixed 0.5 near plane
   // quantized the distant camera deck and lens faces into competing depths.
   state.camera.near = Math.max(0.5, (state.camera.position.z - 80) * 0.45);
-  state.camera.setViewOffset(3600, 1310, 180, -1310, 3600, 3930);
+  state.camera.setViewOffset(3600, 1310, -1020, -1310, 6000, 3930);
   state.camera.lookAt(cameraX, cameraY, 0);
   state.camera.zoom = THREE.MathUtils.lerp(1, compact ? 2.35 : 3.8, close);
   state.camera.updateProjectionMatrix();
@@ -548,7 +559,7 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
       const y = canvasY + (1 - projected.y) * canvasRect.height / 2;
       const targetX = THREE.MathUtils.lerp((compact ? 0.37 : 0.225) * width, width / 2, lensTravel);
       const targetY = THREE.MathUtils.lerp((compact ? 0.53 : 0.445) * height, height / 2, lensTravel);
-      state.camera.setViewOffset(3600, 1310, 180 + (x - targetX) / canvasRect.width * 3600, -1310 + (y - targetY) / canvasRect.height * 3930, 3600, 3930);
+      state.camera.setViewOffset(3600, 1310, -1020 + (x - targetX) / canvasRect.width * 6000, -1310 + (y - targetY) / canvasRect.height * 3930, 6000, 3930);
       state.camera.updateProjectionMatrix();
     }
     state.skate.paint(width, height, window.innerWidth);
@@ -566,6 +577,7 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
   // Preserve the simple dark housing and central optic as the camera moves
   // from the photographic phone surface into the modeled aperture.
   state.opticalGlass.opacity = THREE.MathUtils.smoothstep(shutterPhase, 0.3, 0.82);
+  state.opticalGlass.userData.sceneReveal.value = scenePeek * (1 - sceneExpansion);
   state.flashGlass.uniforms.uReveal.value = detailReveal;
   const closure = THREE.MathUtils.smoothstep(shutterPhase, 0.43, 0.76);
   const reopening = THREE.MathUtils.smoothstep(shutterPhase, 0.76, 1);
@@ -712,7 +724,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       const opticalGlass = makeOpticalGlass(sensorTexture);
       const scenePhotos = loaded.slice(9);
       const skate = createSkateOptics(scenePhotos.map((texture) => texture.image as HTMLImageElement), scenePhotos[0]);
-      const sceneInLens = add(new THREE.CircleGeometry(16.5, 256), skate.material, -170, 465, D / 2 + 38.1);
+      const sceneInLens = add(skate.geometry, skate.material, -170, 465, D / 2 + 36.4);
       sceneInLens.renderOrder = 4;
       const lenses = [
         [-170, 465],
