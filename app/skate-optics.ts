@@ -42,27 +42,30 @@ export function createSkateOptics(images: HTMLImageElement[], cityTexture: THREE
       uCityAspect: { value: images[0].width / images[0].height },
       uReveal: { value: 0 },
       uCanvasRect: { value: new THREE.Vector4() },
-      uPhotoRect: { value: new THREE.Vector4() },
-      uTravel: { value: 0 },
+      uExpansion: { value: 0 },
+      uPreviewScale: { value: 0.82 },
     },
     vertexShader: `varying vec4 vClip; varying vec2 vUv;
       void main() { vUv = uv; vClip = projectionMatrix * modelViewMatrix * vec4(position, 1.); gl_Position = vClip; }`,
-    fragmentShader: `uniform sampler2D uPhoto; uniform sampler2D uCity; uniform vec2 uPanelSize; uniform float uCityAspect; uniform float uReveal; uniform float uTravel;
-      uniform vec4 uCanvasRect; uniform vec4 uPhotoRect; varying vec4 vClip; varying vec2 vUv;
+    fragmentShader: `uniform sampler2D uPhoto; uniform sampler2D uCity; uniform vec2 uPanelSize; uniform float uCityAspect; uniform float uReveal; uniform float uExpansion; uniform float uPreviewScale;
+      uniform vec4 uCanvasRect; varying vec4 vClip; varying vec2 vUv;
       void main() {
         vec2 screen = vClip.xy / vClip.w * .5 + .5;
         screen.y = 1. - screen.y;
         vec2 panel = uCanvasRect.xy + screen * uCanvasRect.zw;
-        vec2 photo = (panel - uPhotoRect.xy) / uPhotoRect.zw;
-        vec2 backgroundUv = mix(vUv, vec2(panel.x / uPanelSize.x, 1. - panel.y / uPanelSize.y), uTravel);
-        float frameAspect = mix(1., uPanelSize.x / uPanelSize.y, uTravel);
+        // The preview stays fixed in lens coordinates during the entire dive.
+        // Only after the pupil surrounds the viewport do we enter the scene.
+        vec2 previewPhoto = (vec2(vUv.x, 1. - vUv.y) - .5) / (uPreviewScale * vec2(uPanelSize.x / uPanelSize.y, 1.)) + .5;
+        vec2 photo = mix(previewPhoto, panel / uPanelSize, uExpansion);
+        vec2 backgroundUv = mix(vUv, vec2(panel.x / uPanelSize.x, 1. - panel.y / uPanelSize.y), uExpansion);
+        float frameAspect = mix(1., uPanelSize.x / uPanelSize.y, uExpansion);
         vec2 cover = vec2(min(1., frameAspect / uCityAspect), min(1., uCityAspect / frameAspect));
         backgroundUv = (backgroundUv - .5) * cover + .5;
         vec3 background = texture2D(uCity, backgroundUv).rgb;
         vec4 foreground = texture2D(uPhoto, vec2(photo.x, 1. - photo.y));
         float inside = step(0., photo.x) * step(0., photo.y) * step(photo.x, 1.) * step(photo.y, 1.);
         vec3 color = mix(background, foreground.rgb, foreground.a * inside);
-        float glassShade = mix(.82 + .18 * (1. - pow(length(vUv - .5) * 2., 3.)), 1., uTravel);
+        float glassShade = mix(.82 + .18 * (1. - pow(length(vUv - .5) * 2., 3.)), 1., uExpansion);
         gl_FragColor = vec4(color * glassShade, uReveal);
         #include <colorspace_fragment>
       }`,

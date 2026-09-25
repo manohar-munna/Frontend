@@ -247,10 +247,11 @@ export default function ColorHero() {
   const lensPhase = smoothstep(clamp01((cameraProgress - 0.54) / 0.18));
   const shutterPhase = smoothstep(clamp01((cameraProgress - 0.75) / 0.23));
   const scenePeek = smoothstep(clamp01((scrollProgress - 0.59) / 0.035));
-  const apertureOpen = smoothstep(clamp01((scrollProgress - 0.59) / 0.065));
-  const lensTravel = smoothstep(clamp01((scrollProgress - 0.65) / 0.145));
-  const depthReveal = smoothstep(clamp01((scrollProgress - 0.80) / 0.065));
-  const phoneSettle = smoothstep(clamp01((scrollProgress - 0.86) / 0.12));
+  const apertureOpen = 0;
+  const sceneExpansion = smoothstep(clamp01((scrollProgress - 0.785) / 0.05));
+  const lensTravel = smoothstep(clamp01((scrollProgress - 0.65) / 0.135));
+  const depthReveal = smoothstep(clamp01((scrollProgress - 0.84) / 0.035));
+  const phoneSettle = smoothstep(clamp01((scrollProgress - 0.88) / 0.115));
   const cameraCopyFade = 1 - smoothstep(clamp01((scrollProgress - 0.615) / 0.035));
   const lensReveal = smoothstep(clamp01((lensPhase - 0.05) / 0.28));
   const reveal = smoothstep(clamp01((phaseOne - 0.06) / 0.34));
@@ -362,7 +363,7 @@ export default function ColorHero() {
           </div>
 
           <div className="hero-rock" aria-hidden="true" style={sceneReady ? { opacity: 1 - reveal } : undefined}><Image src="/assets/moss-rock.png" alt="" fill priority sizes="(max-width: 700px) 100vw, 85vw" /></div>
-          <div ref={productRef} className="color-product" role="img" aria-label={`${theme.name} iPhone 18 Pro concept`} style={sceneReady ? { top: `${topBase}%`, opacity: lensTravel < 1 ? 1 : 0, transform: `translate(calc(-50% + ${shift}px), calc(-50% + ${topShift}px)) scale(${productScale})` } : undefined}>
+          <div ref={productRef} className="color-product" role="img" aria-label={`${theme.name} iPhone 18 Pro concept`} style={sceneReady ? { top: `${topBase}%`, opacity: sceneExpansion < 1 ? 1 : 0, transform: `translate(calc(-50% + ${shift}px), calc(-50% + ${topShift}px)) scale(${productScale})` } : undefined}>
             <div className="product-artboard" style={{ width: artWidth, height: artHeight }}>
               <svg className="phone-surface-masks" width="0" height="0" aria-hidden="true">
                 <defs>
@@ -398,7 +399,7 @@ export default function ColorHero() {
                 </div>
               ))}
               <div className="three-phone-layer" style={{ opacity: modelReady ? 1 : 0, width: "300%", height: "300%", left: "-100%", top: "-100%" }}>
-                <ThreePhone color={theme.name} turn={turn} lensPhase={lensPhase} shutterPhase={shutterPhase} apertureOpen={apertureOpen} scenePeek={scenePeek} lensTravel={lensTravel} compact={mobile} onReady={handleModelReady} />
+                <ThreePhone color={theme.name} turn={turn} lensPhase={lensPhase} shutterPhase={shutterPhase} apertureOpen={apertureOpen} scenePeek={scenePeek} lensTravel={lensTravel} sceneExpansion={sceneExpansion} compact={mobile} onReady={handleModelReady} />
               </div>
             </div>
           </div>
@@ -425,8 +426,8 @@ export default function ColorHero() {
             <p className="shutter-description">The 48MP Fusion Main camera brings the scene into focus. Watch its six-blade aperture open to meet the light.</p>
             <div className="shutter-specs"><span><strong>48MP</strong>Fusion Main</span><span><strong>ƒ/1.48–ƒ/4</strong>Variable aperture</span></div>
           </div>
-          <div className="skate-end-backdrop" style={{ opacity: lensTravel >= 1 ? 1 : 0 }} />
-          <div className="skate-portal" style={{ left: sceneLeft, top: sceneTop, width: sceneWidth, height: sceneHeight, borderRadius: `${phoneSettle * 32}px`, opacity: lensTravel >= 1 ? 1 : 0, pointerEvents: depthReveal > 0.95 ? "auto" : "none" }} aria-hidden={lensTravel < 1}>
+          <div className="skate-end-backdrop" style={{ opacity: sceneExpansion >= 1 ? 1 : 0 }} />
+          <div className="skate-portal" style={{ left: sceneLeft, top: sceneTop, width: sceneWidth, height: sceneHeight, borderRadius: `${phoneSettle * 32}px`, opacity: sceneExpansion >= 1 ? 1 : 0, pointerEvents: depthReveal > 0.95 ? "auto" : "none" }} aria-hidden={sceneExpansion < 1}>
             <div className="skate-canvas" style={{ width: sceneWidth, height: sceneHeight, left: 0, top: 0 }}>
             <div className="skate-background">
               <Image src="/assets/skate-city-v1.png" alt="" fill unoptimized sizes="100vw" style={{ objectFit: "cover", objectPosition: "center center" }} />
