@@ -206,8 +206,8 @@ export default function ColorHero() {
     }, 1330);
   }, []);
 
-  // The original three-screen phone journey keeps its timing. The extra two
-  // screens are reserved for travelling through the lens and into the photo.
+  // Preserve the original phone journey, then spend the remaining scroll
+  // distance moving through the optics and settling the photo into a display.
   const cameraProgress = clamp01(scrollProgress * (5 / 3));
   const carouselVisible = cameraProgress <= 0.04 * 0.54;
   useEffect(() => {
@@ -246,11 +246,11 @@ export default function ColorHero() {
   const phaseOne = clamp01(cameraProgress / 0.54);
   const lensPhase = smoothstep(clamp01((cameraProgress - 0.54) / 0.18));
   const shutterPhase = smoothstep(clamp01((cameraProgress - 0.75) / 0.23));
-  const lensWindow = smoothstep(clamp01((scrollProgress - 0.59) / 0.07));
-  const pushThrough = smoothstep(clamp01((scrollProgress - 0.66) / 0.13));
-  const subjectTravel = pushThrough;
-  const depthReveal = smoothstep(clamp01((scrollProgress - 0.77) / 0.11));
-  const cameraCopyFade = 1 - smoothstep(clamp01(pushThrough / 0.48));
+  const scenePeek = smoothstep(clamp01((scrollProgress - 0.57) / 0.045));
+  const lensTravel = smoothstep(clamp01((scrollProgress - 0.65) / 0.145));
+  const depthReveal = smoothstep(clamp01((scrollProgress - 0.77) / 0.095));
+  const phoneSettle = smoothstep(clamp01((scrollProgress - 0.86) / 0.12));
+  const cameraCopyFade = 1 - smoothstep(clamp01(lensTravel / 0.22));
   const cameraVignette = smoothstep(clamp01((shutterPhase - 0.04) / 0.5));
   const lensReveal = smoothstep(clamp01((lensPhase - 0.05) / 0.28));
   const reveal = smoothstep(clamp01((phaseOne - 0.06) / 0.34));
@@ -259,17 +259,29 @@ export default function ColorHero() {
   const companionExit = smoothstep(clamp01((phaseOne - 0.045) / 0.26));
   const railOpacity = 1 - smoothstep(clamp01((phaseOne - 0.01) / 0.1));
   const mobile = panelSize.width < 670;
-  const portalX = mobile ? 0.37 : 0.225;
-  const portalY = mobile ? 0.53 : 0.445;
+  const lensX = mobile ? 0.37 : 0.225;
+  const lensY = mobile ? 0.53 : 0.445;
   const lensRadius = panelSize.width * (mobile ? 0.105 : 0.061);
+  const portalX = mix(lensX, 0.5, lensTravel);
+  const portalY = mix(lensY, 0.5, lensTravel);
   const farCorner = Math.max(
-    Math.hypot(portalX * panelSize.width, portalY * panelSize.height),
-    Math.hypot((1 - portalX) * panelSize.width, portalY * panelSize.height),
-    Math.hypot(portalX * panelSize.width, (1 - portalY) * panelSize.height),
-    Math.hypot((1 - portalX) * panelSize.width, (1 - portalY) * panelSize.height),
+    Math.hypot(panelSize.width / 2, panelSize.height / 2),
+    Math.hypot(lensX * panelSize.width, lensY * panelSize.height),
+    Math.hypot((1 - lensX) * panelSize.width, lensY * panelSize.height),
+    Math.hypot(lensX * panelSize.width, (1 - lensY) * panelSize.height),
+    Math.hypot((1 - lensX) * panelSize.width, (1 - lensY) * panelSize.height),
   ) + 16;
-  const portalRadius = lensRadius * lensWindow + (farCorner - lensRadius) * pushThrough;
-  const portalFull = pushThrough > 0.999;
+  const portalRadius = mix(lensRadius, farCorner, lensTravel);
+  const portalFull = lensTravel > 0.999;
+  const phoneWidth = Math.min(panelSize.width * (mobile ? 0.72 : 0.28), panelSize.height * (mobile ? 0.41 : 0.43));
+  const phoneHeight = Math.min(panelSize.height * (mobile ? 0.76 : 0.83), phoneWidth * 2.1);
+  const phoneWidthSettle = smoothstep(clamp01(phoneSettle / 0.78));
+  const sceneWidth = mix(panelSize.width, phoneWidth, phoneWidthSettle);
+  const sceneHeight = mix(panelSize.height, phoneHeight, phoneSettle);
+  const sceneLeft = (panelSize.width - sceneWidth) / 2;
+  const sceneTop = (panelSize.height - sceneHeight) / 2;
+  const tunnelOpacity = smoothstep(clamp01((lensTravel - 0.02) / 0.22)) * (1 - smoothstep(clamp01((lensTravel - 0.58) / 0.3)));
+  const frameOpacity = smoothstep(clamp01((phoneSettle - 0.45) / 0.45));
   // The 3D rear remains the same object from the opening pose through the turn.
   const assetScale = Math.min(productSize.width / 1200, productSize.height / 1310);
   const artWidth = 1200 * assetScale;
@@ -334,6 +346,7 @@ export default function ColorHero() {
     "--hero-camera-stage": theme.cameraStage,
     "--hero-camera-panel": theme.cameraPanel,
     "--hero-camera-accent": theme.cameraAccent,
+    "--hero-phone-frame": theme.cameraStage,
   } as CSSProperties;
 
   return (
@@ -351,6 +364,7 @@ export default function ColorHero() {
         <div className="color-stage">
           {ripple && <div key={`outer-${ripple.key}`} className="hero-ripple hero-ripple-outer" style={{ backgroundColor: colors[ripple.index].outer }} />}
           <div className="scroll-outer-wash" style={{ opacity: storyOpacity }} />
+          <div className="skate-outer-backdrop" style={{ opacity: smoothstep(clamp01(lensTravel / 0.35)) }} />
           <div ref={panelRef} className="reel-panel color-panel">
           {ripple && <div key={`stage-${ripple.key}`} className="hero-ripple hero-ripple-stage" style={{ backgroundColor: colors[ripple.index].stage }} />}
           <div className="color-glow" />
@@ -426,9 +440,10 @@ export default function ColorHero() {
             <p className="shutter-description">The 48MP Fusion Main camera brings the scene into focus. Watch its six-blade aperture open to meet the light.</p>
             <div className="shutter-specs"><span><strong>48MP</strong>Fusion Main</span><span><strong>ƒ/1.48–ƒ/4</strong>Variable aperture</span></div>
           </div>
-          <div className="skate-portal" style={portalFull ? { inset: 0, borderRadius: 0, opacity: lensWindow, pointerEvents: depthReveal > 0.95 ? "auto" : "none" } : { left: portalX * panelSize.width - portalRadius, top: portalY * panelSize.height - portalRadius, width: portalRadius * 2, height: portalRadius * 2, borderRadius: "50%", opacity: lensWindow, pointerEvents: "none" }} aria-hidden={lensWindow < 0.01}>
-            <div className="skate-canvas" style={{ width: panelSize.width, height: panelSize.height, left: portalFull ? 0 : portalRadius - portalX * panelSize.width, top: portalFull ? 0 : portalRadius - portalY * panelSize.height }}>
-            <div className="skate-background" style={{ transform: `scale(${mix(0.74, 1, pushThrough)})`, transformOrigin: `${portalX * 100}% ${portalY * 100}%` }}>
+          <div className="skate-end-backdrop" style={{ opacity: smoothstep(clamp01(lensTravel / 0.17)) }} />
+          <div className="skate-portal" style={{ left: portalFull ? sceneLeft : portalX * panelSize.width - portalRadius, top: portalFull ? sceneTop : portalY * panelSize.height - portalRadius, width: portalFull ? sceneWidth : portalRadius * 2, height: portalFull ? sceneHeight : portalRadius * 2, borderRadius: portalFull ? `${phoneSettle * 32}px` : "50%", opacity: scenePeek, pointerEvents: depthReveal > 0.95 ? "auto" : "none" }} aria-hidden={scenePeek < 0.01}>
+            <div className="skate-canvas" style={{ width: portalFull ? sceneWidth : panelSize.width, height: portalFull ? sceneHeight : panelSize.height, left: portalFull ? 0 : portalRadius - portalX * panelSize.width, top: portalFull ? 0 : portalRadius - portalY * panelSize.height }}>
+            <div className="skate-background" style={{ transform: `scale(${mix(0.74, 1, lensTravel)})`, transformOrigin: `${lensX * 100}% ${lensY * 100}%` }}>
               <Image src="/assets/skate-city-v1.png" alt="" fill sizes="100vw" style={{ objectFit: "cover", objectPosition: "center center" }} />
             </div>
             <button
@@ -436,10 +451,10 @@ export default function ColorHero() {
               type="button"
               className={`skate-subject ${depthReveal > 0.95 ? "is-interactive" : ""}`}
               style={{
-                left: `${mix(portalX * 100, mobile ? 50 : 54, subjectTravel)}%`,
-                top: `${mix(mobile ? 48 : 36, mobile ? 20 : 1, subjectTravel)}%`,
-                transform: `translateX(-50%) scale(${mix(0.16, mobile ? 1 : 0.84, subjectTravel)})`,
-                opacity: lensWindow,
+                left: `${mix(mix(lensX * 100, mobile ? 50 : 54, lensTravel), 50, phoneWidthSettle)}%`,
+                top: `${mix(mix(mobile ? 48 : 36, mobile ? 20 : 1, lensTravel), mobile ? 13 : 15, phoneSettle)}%`,
+                transform: `translateX(-50%) scale(${mix(mix(0.16, mobile ? 1 : 0.84, lensTravel), mobile ? 0.48 : 0.34, phoneWidthSettle)})`,
+                opacity: scenePeek,
               } as CSSProperties}
               aria-label="Move the skateboarder in the photo"
               tabIndex={depthReveal > 0.95 ? 0 : -1}
@@ -476,6 +491,14 @@ export default function ColorHero() {
               <div className="skate-rider-layer" style={{ marginTop: `${-depthReveal * 18}px` }}><Image src="/assets/skate-rider-v1.png" alt="" width={1024} height={1536} sizes="(max-width: 700px) 90vw, 50vw" /></div>
             </button>
             </div>
+          </div>
+          <div className="lens-tunnel" style={{ left: portalX * panelSize.width, top: portalY * panelSize.height, opacity: tunnelOpacity, "--lens-radius": `${portalRadius}px` } as CSSProperties} aria-hidden="true">
+            <span className="lens-tunnel-ring lens-tunnel-inner" />
+            <span className="lens-tunnel-ring lens-tunnel-middle" />
+            <span className="lens-tunnel-ring lens-tunnel-outer" />
+          </div>
+          <div className="skate-phone-frame" style={{ left: sceneLeft - 8, top: sceneTop - 8, width: sceneWidth + 16, height: sceneHeight + 16, borderRadius: `${Math.max(24, phoneSettle * 42)}px`, opacity: frameOpacity }} aria-hidden="true">
+            <span className="skate-phone-island" style={{ opacity: smoothstep(clamp01((phoneSettle - 0.82) / 0.13)) }} />
           </div>
         </div>
         </div>

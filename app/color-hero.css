@@ -21,6 +21,7 @@
 .color-stage { position: sticky; top: 0; height: 100svh; overflow: hidden; }
 .story-anchor { position: absolute; top: 100svh; }
 .scroll-outer-wash { position: absolute; inset: 0; background: var(--hero-border-outer); pointer-events: none; }
+.skate-outer-backdrop { position: absolute; z-index: 0; inset: 0; background: #101015; pointer-events: none; }
 .color-panel { position: absolute; z-index: 1; left: 4.6vw; right: 4.6vw; top: clamp(78px,9vh,105px); bottom: clamp(42px,6vh,64px); overflow: hidden; border: 5px solid color-mix(in srgb,var(--hero-border-stage) 55%,var(--hero-border-outer)); border-radius: 27px; background: var(--hero-stage); color: var(--hero-ink); transition: color .7s,border-color 1.2s cubic-bezier(.23,.78,.2,1); box-shadow: inset 0 0 110px rgba(0,0,0,.1),0 15px 45px rgba(22,6,11,.1); }
 .color-panel:after { content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(115deg,rgba(255,255,255,.05),transparent 35%,rgba(0,0,0,.12)); opacity: .75; }
 .is-scrolling .color-panel { transition: color .7s; }
@@ -73,10 +74,20 @@
 .scroll-scene-glow { position: absolute; width: 55%; aspect-ratio: 1; right: 2%; top: 7%; border-radius: 50%; background: radial-gradient(circle,color-mix(in srgb,var(--hero-glow) 28%,transparent),transparent 70%); }
 .shutter-backdrop { position: absolute; inset: 0; background: radial-gradient(ellipse at 47% 48%,var(--hero-camera-stage) 0%,color-mix(in srgb,var(--hero-camera-stage),var(--hero-camera-panel) 55%) 57%,var(--hero-camera-panel) 100%); }
 .camera-info-screen { position: absolute; z-index: 12; top: 0; bottom: 0; left: 48%; right: 0; pointer-events: none; background: linear-gradient(90deg,transparent,var(--hero-camera-panel) 12%,var(--hero-camera-panel) 100%); }
+.skate-end-backdrop { position: absolute; z-index: 18; inset: 0; background: radial-gradient(ellipse at 50% 46%,#292027 0%,#171218 58%,#0d0d12 100%); pointer-events: none; }
 .skate-portal { position: absolute; z-index: 20; overflow: hidden; background: #11121a; }
 .skate-canvas { position: absolute; perspective: 1200px; }
 .skate-background { position: absolute; inset: 0; will-change: transform; }
 .skate-background img { object-fit: cover; }
+.lens-tunnel { position: absolute; z-index: 21; width: 0; height: 0; pointer-events: none; }
+.lens-tunnel-ring { position: absolute; left: 0; top: 0; box-sizing: border-box; border-radius: 50%; transform: translate(-50%,-50%); }
+.lens-tunnel-inner { width: calc(var(--lens-radius)*2.18); height: calc(var(--lens-radius)*2.18); border: max(2px,calc(var(--lens-radius)*.11)) solid; border-color: #252127 #090a0e #07080b #19191e; box-shadow: inset 0 0 0 1px rgba(94,82,76,.2),0 0 0 2px rgba(13,13,16,.94),0 7px 14px rgba(0,0,0,.5); }
+.lens-tunnel-middle { width: calc(var(--lens-radius)*2.96); height: calc(var(--lens-radius)*2.96); border: max(3px,calc(var(--lens-radius)*.14)) solid; border-color: #242127 #0c0d12 #08090d #1c1b21; box-shadow: inset 0 0 0 1px rgba(117,91,77,.18),0 0 0 2px rgba(3,4,6,.8),0 10px 25px rgba(0,0,0,.55); }
+.lens-tunnel-outer { width: calc(var(--lens-radius)*4.22); height: calc(var(--lens-radius)*4.22); border: max(4px,calc(var(--lens-radius)*.2)) solid; border-color: #201c22 #0b0c10 #090a0d #1a1920; box-shadow: inset 0 0 0 1px rgba(121,84,69,.13),0 0 0 3px rgba(3,4,7,.78); }
+.skate-phone-frame { position: absolute; z-index: 22; box-sizing: border-box; border: 7px solid color-mix(in srgb,var(--hero-phone-frame) 79%,#0a0a10); background: transparent; box-shadow: 0 0 0 2px #0b0b0f,inset 0 0 0 2px #08090b,0 28px 55px rgba(0,0,0,.48),0 4px 14px rgba(0,0,0,.55); pointer-events: none; }
+.skate-phone-frame:before,.skate-phone-frame:after { content: ''; position: absolute; top: 25%; width: 3px; height: 11%; border-radius: 3px; background: linear-gradient(90deg,#18151a,color-mix(in srgb,var(--hero-phone-frame) 85%,#b6a2a3),#151318); box-shadow: 0 1px 2px rgba(0,0,0,.75); }
+.skate-phone-frame:before { left: -11px; }.skate-phone-frame:after { right: -11px; top: 31%; height: 14%; }
+.skate-phone-island { position: absolute; z-index: 3; left: 50%; top: 15px; translate: -50% 0; width: 29%; height: 23px; border: 1px solid #28262d; border-radius: 999px; background: #060709; box-shadow: inset 0 2px 5px rgba(0,0,0,.9),0 1px 3px rgba(0,0,0,.35); }
 .skate-subject { position: absolute; z-index: 2; width: clamp(470px,49vw,700px); aspect-ratio: 1; padding: 0; border: 0; appearance: none; background: transparent; color: inherit; transform-origin: center top; pointer-events: none; outline: none; transform-style: preserve-3d; will-change: transform,left,top; }
 .skate-subject.is-interactive { pointer-events: auto; cursor: pointer; }
 .skate-subject:focus-visible { outline: 2px solid #fff9ec; outline-offset: 8px; border-radius: 24px; }
@@ -125,6 +136,7 @@
   .camera-info-screen { display: block; left: 0; right: 0; top: 27%; bottom: auto; height: 25%; background: linear-gradient(180deg,var(--hero-camera-panel) 12%,color-mix(in srgb,var(--hero-camera-panel) 97%,transparent) 26%,transparent 100%); }
   .skate-subject { width: min(104vw,470px); }
   .skate-board-layer { left: 18%; top: 69%; width: 69%; }
+  .skate-phone-frame { border-width: 5px; }.skate-phone-island { top: 11px; height: 19px; }
   .design-placeholder { left: 8%; right: 8%; top: 43%; width: 84%; height: 48%; padding: 15px; border-radius: 21px; font-size: 8px; }
 }
 @media(max-width:420px) { .color-product { width: 84vw; }.color-card { width: 88px; height: 88px; }.color-heading h1 { font-size: 35px; }.hero-rock { width: 170%; left: -35%; } }
