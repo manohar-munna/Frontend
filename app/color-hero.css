@@ -21,7 +21,7 @@
 .color-stage { position: sticky; top: 0; height: 100svh; overflow: hidden; }
 .story-anchor { position: absolute; top: 100svh; }
 .scroll-outer-wash { position: absolute; inset: 0; background: var(--hero-border-outer); pointer-events: none; }
-.skate-outer-backdrop { position: absolute; z-index: 0; inset: 0; background: #101015; pointer-events: none; }
+.skate-outer-backdrop { position: absolute; z-index: 0; inset: 0; background: var(--hero-skate-outer); pointer-events: none; }
 .color-panel { position: absolute; z-index: 1; left: 4.6vw; right: 4.6vw; top: clamp(78px,9vh,105px); bottom: clamp(42px,6vh,64px); overflow: hidden; border: 5px solid color-mix(in srgb,var(--hero-border-stage) 55%,var(--hero-border-outer)); border-radius: 27px; background: var(--hero-stage); color: var(--hero-ink); transition: color .7s,border-color 1.2s cubic-bezier(.23,.78,.2,1); box-shadow: inset 0 0 110px rgba(0,0,0,.1),0 15px 45px rgba(22,6,11,.1); }
 .color-panel:after { content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(115deg,rgba(255,255,255,.05),transparent 35%,rgba(0,0,0,.12)); opacity: .75; }
 .is-scrolling .color-panel { transition: color .7s; }
@@ -74,7 +74,7 @@
 .scroll-scene-glow { position: absolute; width: 55%; aspect-ratio: 1; right: 2%; top: 7%; border-radius: 50%; background: radial-gradient(circle,color-mix(in srgb,var(--hero-glow) 28%,transparent),transparent 70%); }
 .shutter-backdrop { position: absolute; inset: 0; background: radial-gradient(ellipse at 47% 48%,var(--hero-camera-stage) 0%,color-mix(in srgb,var(--hero-camera-stage),var(--hero-camera-panel) 55%) 57%,var(--hero-camera-panel) 100%); }
 .camera-info-screen { position: absolute; z-index: 12; top: 0; bottom: 0; left: 48%; right: 0; pointer-events: none; background: linear-gradient(90deg,transparent,var(--hero-camera-panel) 12%,var(--hero-camera-panel) 100%); }
-.skate-end-backdrop { position: absolute; z-index: 18; inset: 0; background: radial-gradient(ellipse at 50% 46%,#292027 0%,#171218 58%,#0d0d12 100%); pointer-events: none; }
+.skate-end-backdrop { position: absolute; z-index: 18; inset: 0; background: radial-gradient(ellipse at 50% 46%,color-mix(in srgb,var(--hero-skate-stage) 82%,var(--hero-skate-outer)) 0%,var(--hero-skate-stage) 58%,color-mix(in srgb,var(--hero-skate-camera-panel) 48%,var(--hero-skate-stage)) 100%); pointer-events: none; }
 .skate-portal { position: absolute; z-index: 20; overflow: hidden; background: #11121a; }
 .skate-canvas { position: absolute; perspective: 1200px; }
 .skate-background { position: absolute; inset: 0; will-change: transform; }

@@ -90,7 +90,7 @@ export default function ColorHero() {
     const animate = (now: number) => {
       const elapsed = Math.min(64, lastTime ? now - lastTime : 16);
       lastTime = now;
-      current += (target - current) * (1 - Math.exp(-elapsed / 140));
+      current += (target - current) * (1 - Math.exp(-elapsed / 70));
       if (Math.abs(target - current) < 0.0001) current = target;
       setScrollProgress(current);
       frame = current === target ? 0 : requestAnimationFrame(animate);
@@ -251,7 +251,7 @@ export default function ColorHero() {
   const sceneExpansion = smoothstep(clamp01((scrollProgress - 0.785) / 0.05));
   const lensTravel = smoothstep(clamp01((scrollProgress - 0.65) / 0.135));
   const depthReveal = smoothstep(clamp01((scrollProgress - 0.84) / 0.035));
-  const phoneSettle = smoothstep(clamp01((scrollProgress - 0.88) / 0.115));
+  const phoneSettle = smoothstep(clamp01((scrollProgress - 0.835) / 0.075));
   const cameraCopyFade = 1 - smoothstep(clamp01((scrollProgress - 0.615) / 0.035));
   const lensReveal = smoothstep(clamp01((lensPhase - 0.05) / 0.28));
   const reveal = smoothstep(clamp01((phaseOne - 0.06) / 0.34));
@@ -333,6 +333,9 @@ export default function ColorHero() {
     "--hero-camera-panel": theme.cameraPanel,
     "--hero-camera-accent": theme.cameraAccent,
     "--hero-phone-frame": theme.cameraStage,
+    "--hero-skate-outer": theme.outer,
+    "--hero-skate-stage": theme.stage,
+    "--hero-skate-camera-panel": theme.cameraPanel,
   } as CSSProperties;
 
   return (

@@ -516,6 +516,8 @@ type ModelState = {
 };
 
 function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutterPhase: number, compact: boolean, apertureOpen = 0, scenePeek = 0, lensTravel = 0, sceneExpansion = 0) {
+  // The photographic scene fully covers the 3D phone from this point on.
+  if (sceneExpansion >= 1) return;
   // Turning the rear toward the left reveals the phone's left rail and makes
   // the outward-facing optical axis project to the right of the chassis.
   state.phone.rotation.y = THREE.MathUtils.degToRad(-34 * (1 - turn) + 27 * lensPhase * (1 - shutterPhase));
@@ -540,6 +542,22 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
   const panel = state.renderer.domElement.closest(".color-panel") as HTMLElement | null;
   if (panel) {
     const bounds = panel.getBoundingClientRect();
+    // The model's canvas extends well beyond the panel for macro framing.
+    // Rasterize only the part the panel can actually show at full DPR.
+    const clipLeft = Math.max(canvasRect.left, bounds.left);
+    const clipTop = Math.max(canvasRect.top, bounds.top);
+    const clipRight = Math.min(canvasRect.right, bounds.right);
+    const clipBottom = Math.min(canvasRect.bottom, bounds.bottom);
+    const canvas = state.renderer.domElement;
+    const scaleX = canvas.clientWidth / canvasRect.width;
+    const scaleY = canvas.clientHeight / canvasRect.height;
+    state.renderer.setScissorTest(true);
+    state.renderer.setScissor(
+      (clipLeft - canvasRect.left) * scaleX,
+      (canvasRect.bottom - clipBottom) * scaleY,
+      Math.max(0, clipRight - clipLeft) * scaleX,
+      Math.max(0, clipBottom - clipTop) * scaleY,
+    );
     const width = panel.clientWidth;
     const height = panel.clientHeight;
     const canvasX = canvasRect.left - bounds.left - panel.clientLeft;
@@ -601,7 +619,7 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
     blade.lipMaterial.opacity = 0.68;
   }
   for (const ring of state.shutterRings) ring.opacity = THREE.MathUtils.smoothstep(shutterPhase, 0.3, 0.72);
-  state.render(true);
+  state.render();
 }
 
 export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compact, apertureOpen = 0, scenePeek = 0, lensTravel = 0, sceneExpansion = 0, onReady }: { color: string; turn: number; lensPhase: number; shutterPhase: number; compact: boolean; apertureOpen?: number; scenePeek?: number; lensTravel?: number; sceneExpansion?: number; onReady?: (ready: boolean) => void }) {
