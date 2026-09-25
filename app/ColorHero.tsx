@@ -251,7 +251,8 @@ export default function ColorHero() {
   const sceneExpansion = smoothstep(clamp01((scrollProgress - 0.785) / 0.05));
   const lensTravel = smoothstep(clamp01((scrollProgress - 0.65) / 0.135));
   const depthReveal = smoothstep(clamp01((scrollProgress - 0.84) / 0.035));
-  const phoneSettle = smoothstep(clamp01((scrollProgress - 0.835) / 0.075));
+  const phoneSettle = smoothstep(clamp01((scrollProgress - 0.835) / 0.04));
+  const displayReveal = smoothstep(clamp01((phoneSettle - 0.62) / 0.38));
   const cameraCopyFade = 1 - smoothstep(clamp01((scrollProgress - 0.615) / 0.035));
   const lensReveal = smoothstep(clamp01((lensPhase - 0.05) / 0.28));
   const reveal = smoothstep(clamp01((phaseOne - 0.06) / 0.34));
@@ -260,8 +261,8 @@ export default function ColorHero() {
   const companionExit = smoothstep(clamp01((phaseOne - 0.045) / 0.26));
   const railOpacity = 1 - smoothstep(clamp01((phaseOne - 0.01) / 0.1));
   const mobile = panelSize.width < 670;
-  const phoneWidth = Math.min(panelSize.width * (mobile ? 0.72 : 0.28), panelSize.height * (mobile ? 0.41 : 0.43));
-  const phoneHeight = Math.min(panelSize.height * (mobile ? 0.76 : 0.83), phoneWidth * 2.1);
+  const phoneWidth = Math.min(panelSize.width * (mobile ? 0.72 : 0.28), panelSize.height * (mobile ? 0.68 / 2.1 : 0.43));
+  const phoneHeight = Math.min(panelSize.height * (mobile ? 0.68 : 0.83), phoneWidth * 2.1);
   const phoneWidthSettle = smoothstep(clamp01(phoneSettle / 0.78));
   const sceneWidth = mix(panelSize.width, phoneWidth, phoneWidthSettle);
   const sceneHeight = mix(panelSize.height, phoneHeight, phoneSettle);
@@ -332,6 +333,7 @@ export default function ColorHero() {
     "--hero-camera-stage": theme.cameraStage,
     "--hero-camera-panel": theme.cameraPanel,
     "--hero-camera-accent": theme.cameraAccent,
+    "--hero-display-accent": theme.name === "Pearl" ? "#754f61" : theme.cameraAccent,
     "--hero-phone-frame": theme.cameraStage,
     "--hero-skate-outer": theme.outer,
     "--hero-skate-stage": theme.stage,
@@ -430,6 +432,19 @@ export default function ColorHero() {
             <div className="shutter-specs"><span><strong>48MP</strong>Fusion Main</span><span><strong>ƒ/1.48–ƒ/4</strong>Variable aperture</span></div>
           </div>
           <div className="skate-end-backdrop" style={{ opacity: sceneExpansion >= 1 ? 1 : 0 }} />
+          <section className="display-details" style={{ opacity: displayReveal, transform: `translateY(${(1 - displayReveal) * 22}px)` }} aria-label="Display details" aria-hidden={displayReveal < 0.99}>
+            <div className="display-details-intro">
+              <p className="display-details-kicker">03 / THE DISPLAY</p>
+              <h2>Every frame<br /><em>{" "}feels closer.</em></h2>
+              <p className="display-details-description">An expansive OLED canvas gives every moment crisp detail, rich contrast, and fluid motion.</p>
+            </div>
+            <div className="display-details-specs">
+              <p className="display-details-kicker">MADE TO BE SEEN</p>
+              <div><strong>OLED</strong><span>Deep contrast</span></div>
+              <div><strong>Adaptive</strong><span>Fluid refresh</span></div>
+              <div><strong>Edge to edge</strong><span>More of the moment</span></div>
+            </div>
+          </section>
           <div className="skate-portal" style={{ left: sceneLeft, top: sceneTop, width: sceneWidth, height: sceneHeight, borderRadius: `${phoneSettle * 32}px`, opacity: sceneExpansion >= 1 ? 1 : 0, pointerEvents: depthReveal > 0.95 ? "auto" : "none" }} aria-hidden={sceneExpansion < 1}>
             <div className="skate-canvas" style={{ width: sceneWidth, height: sceneHeight, left: 0, top: 0 }}>
             <div className="skate-background">
@@ -479,10 +494,19 @@ export default function ColorHero() {
               <div className="skate-board-layer" style={{ marginTop: `${-depthReveal * 18}px` }}><Image src="/assets/skate-board-v1.png" alt="" unoptimized width={1536} height={1024} sizes="(max-width: 700px) 75vw, 34vw" /></div>
               <div className="skate-rider-layer" style={{ marginTop: `${-depthReveal * 18}px` }}><Image src="/assets/skate-rider-v1.png" alt="" unoptimized width={1024} height={1536} sizes="(max-width: 700px) 90vw, 50vw" /></div>
             </button>
+            <div className="skate-camera-ui" style={{ opacity: displayReveal }} aria-hidden="true">
+              <span className="skate-camera-grid" />
+              <div className="skate-camera-top"><span className="skate-camera-flash">⚡</span><span className="skate-camera-top-center">⌃</span><span className="skate-camera-aspect">RAW&nbsp; 48MP</span><span className="skate-camera-settings">◎</span></div>
+              <div className="skate-camera-bottom">
+                <div className="skate-camera-zoom"><span>0.5</span><strong>1×</strong><span>2</span></div>
+                <div className="skate-camera-modes"><span>CINEMATIC</span><span>VIDEO</span><strong>PHOTO</strong><span>PORTRAIT</span><span>PANO</span></div>
+                <div className="skate-camera-controls"><span className="skate-camera-gallery" /><span className="skate-camera-shutter" /><span className="skate-camera-flip">↻</span></div>
+              </div>
+            </div>
             </div>
           </div>
           <div className="skate-phone-frame" style={{ left: sceneLeft - 8, top: sceneTop - 8, width: sceneWidth + 16, height: sceneHeight + 16, borderRadius: `${Math.max(24, phoneSettle * 42)}px`, opacity: frameOpacity }} aria-hidden="true">
-            <span className="skate-phone-island" style={{ opacity: smoothstep(clamp01((phoneSettle - 0.82) / 0.13)) }} />
+            <span className="skate-phone-island" style={{ opacity: smoothstep(clamp01((phoneSettle - 0.72) / 0.22)) }}><span className="skate-island-lens" /></span>
           </div>
         </div>
         </div>
