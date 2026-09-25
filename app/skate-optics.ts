@@ -22,16 +22,18 @@ export function createSkateOptics(images: HTMLImageElement[], cityTexture: THREE
     const subjectWidth = (mobile ? Math.min(viewport * 1.04, 470) : Math.min(700, Math.max(470, viewport * 0.49))) * (mobile ? 0.9 : 0.68);
     const left = width * (mobile ? 0.5 : 0.54) - subjectWidth / 2;
     const top = height * (mobile ? 0.2 : 0.01);
-    const boardWidth = subjectWidth * (mobile ? 0.69 : 0.65);
+    const boardWidth = subjectWidth * 0.72;
     const boardHeight = boardWidth * 1024 / 1536;
-    const boardX = left + subjectWidth * (mobile ? 0.18 : 0.2);
-    const boardY = top + subjectWidth * (mobile ? 0.69 : 0.7);
+    const boardX = left + subjectWidth * 0.28;
+    const boardY = top + subjectWidth * 0.79;
+    // The deck's near edge passes in front of the soles, matching the DOM
+    // foreground stack. Its upper rail follows the line between both feet.
+    context.drawImage(rider, left, top, subjectWidth, subjectWidth * 1.5);
     context.save();
     context.translate(boardX + boardWidth / 2, boardY + boardHeight * 0.45);
     context.rotate(13 * Math.PI / 180);
     context.drawImage(board, -boardWidth / 2, -boardHeight * 0.45, boardWidth, boardHeight);
     context.restore();
-    context.drawImage(rider, left, top, subjectWidth, subjectWidth * 1.5);
     texture.needsUpdate = true;
   };
   // A convex glass cap, recessed below the blade faces. The preview is mapped
@@ -105,8 +107,8 @@ export function createSkateOptics(images: HTMLImageElement[], cityTexture: THREE
         float innerReturn = exp(-pow((radius - .77) * 32., 2.));
         float rim = crescent + .32 * innerReturn;
         vec3 reflection = rim * (vec3(1.15, .72, .38) * keySide + vec3(.62, .29, .76) * returnSide);
-        reflection += vec3(.72, .60, .48) * keySide * .22
-          + vec3(.14, .06, .23) * returnSide * .18;
+        reflection += vec3(.72, .60, .48) * keySide * .34
+          + vec3(.14, .06, .23) * returnSide * .32;
         // Fine coating variation and narrow highlights remain attached to the
         // glass even once the transmitted photograph has become rectilinear.
         float coating = sin(p.x * 17. + p.y * 11.) * sin(p.y * 23. - p.x * 9.);
@@ -114,8 +116,13 @@ export function createSkateOptics(images: HTMLImageElement[], cityTexture: THREE
           * exp(-pow((p.x + .59) * 6., 2.));
         float pinpoint = exp(-dot(p - vec2(-.66, .57), p - vec2(-.66, .57)) * 1200.);
         float returnPin = exp(-dot(p - vec2(.81, -.28), p - vec2(.81, -.28)) * 1600.);
+        float veil = exp(-pow((p.y + .43 * p.x - .51) * 9., 2.))
+          * exp(-pow((p.x + .26) * 2.4, 2.));
+        float coatingArc = exp(-pow((length(p - vec2(.02, -.12)) - .83) * 38., 2.))
+          * smoothstep(.08, .7, abs(p.x));
         reflection += vec3(.65, .69, .76) * polish + vec3(1.8, 1.65, 1.4) * pinpoint
-          + vec3(1.1, .64, 1.4) * returnPin + coating * .0015;
+          + vec3(1.1, .64, 1.4) * returnPin + coating * .0035
+          + vec3(.09, .11, .15) * veil + vec3(.12, .075, .17) * coatingArc;
         color = color * mix(1., transmission, glassPresence) + reflection * glassPresence;
         // The photograph disappears into the dark glass shoulder instead of
         // leaving a hard circular decal edge over the original optical layer.
