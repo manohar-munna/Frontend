@@ -90,8 +90,15 @@ export default function ColorHero() {
     const animate = (now: number) => {
       const elapsed = Math.min(64, lastTime ? now - lastTime : 16);
       lastTime = now;
-      current += (target - current) * (1 - Math.exp(-elapsed / 70));
-      if (Math.abs(target - current) < 0.0001) current = target;
+      const gap = target - current;
+      // A gentle wheel movement gets enough frames to show the short optical
+      // beats. A deliberate long scroll raises the playback rate, while the
+      // per-frame cap still prevents jumping over the iris and lens entirely.
+      const intent = smoothstep(clamp01((Math.abs(gap) - 0.025) / 0.22));
+      const maxRate = mix(0.25, 0.85, intent) * elapsed / 1000;
+      const easedStep = Math.abs(gap) * (1 - Math.exp(-elapsed / 48));
+      current += Math.sign(gap) * Math.min(Math.abs(gap), easedStep, maxRate);
+      if (Math.abs(target - current) < 0.00025) current = target;
       setScrollProgress(current);
       frame = current === target ? 0 : requestAnimationFrame(animate);
     };
@@ -270,8 +277,11 @@ export default function ColorHero() {
   const sceneTop = (panelSize.height - sceneHeight) / 2;
   const frameOpacity = smoothstep(clamp01((phoneSettle - 0.72) / 0.28));
   const showModel = modelReady && entranceDone;
-  const modelBlend = showModel ? smoothstep(clamp01(scrollProgress / 0.012)) : 0;
-  const photoOpacity = showModel ? 1 - smoothstep(clamp01((scrollProgress - 0.012) / 0.008)) : 1;
+  // These are different silhouettes, so any alpha blend draws two outlines.
+  // Switch at the aligned resting pose before the model starts its turn.
+  const modelVisible = showModel && scrollProgress >= 0.018;
+  const modelBlend = modelVisible ? 1 : 0;
+  const photoOpacity = modelVisible ? 0 : 1;
   // The 3D rear remains the same object from the opening pose through the turn.
   const assetScale = Math.min(productSize.width / 1200, productSize.height / 1310);
   const artWidth = 1200 * assetScale;
