@@ -5,11 +5,11 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import ThreePhone from "./ThreePhone";
 
 const colors = [
-  { name: "Burgundy", image: "/assets/iphone-burgundy.png", outer: "#672738", stage: "#2c101c", glow: "#8e3951", ink: "#fff4f1" },
-  { name: "Pearl", image: "/assets/iphone-pearl.png", outer: "#d6d0ca", stage: "#b9b2ac", glow: "#f2eee8", ink: "#2d2527" },
-  { name: "Graphite", image: "/assets/iphone-pair.png", outer: "#57585a", stage: "#202124", glow: "#67696a", ink: "#f8f7f3" },
-  { name: "Sage", image: "/assets/iphone-sage.png", outer: "#718579", stage: "#243e34", glow: "#5b806d", ink: "#f4f7f1" },
-  { name: "Midnight", image: "/assets/iphone-midnight.png", outer: "#344c70", stage: "#10233f", glow: "#315b91", ink: "#f2f6ff" },
+  { name: "Burgundy", image: "/assets/iphone-burgundy.png", outer: "#672738", stage: "#2c101c", glow: "#8e3951", ink: "#fff4f1", cameraStage: "#45202e", cameraPanel: "#171118", cameraAccent: "#dca8b9" },
+  { name: "Pearl", image: "/assets/iphone-pearl.png", outer: "#d6d0ca", stage: "#b9b2ac", glow: "#f2eee8", ink: "#2d2527", cameraStage: "#77736e", cameraPanel: "#242321", cameraAccent: "#e5d9cd" },
+  { name: "Graphite", image: "/assets/iphone-pair.png", outer: "#57585a", stage: "#202124", glow: "#67696a", ink: "#f8f7f3", cameraStage: "#37383b", cameraPanel: "#17181a", cameraAccent: "#c6c8ca" },
+  { name: "Sage", image: "/assets/iphone-sage.png", outer: "#718579", stage: "#243e34", glow: "#5b806d", ink: "#f4f7f1", cameraStage: "#345143", cameraPanel: "#14211b", cameraAccent: "#a9cbb5" },
+  { name: "Midnight", image: "/assets/iphone-midnight.png", outer: "#344c70", stage: "#10233f", glow: "#315b91", ink: "#f2f6ff", cameraStage: "#213d64", cameraPanel: "#101725", cameraAccent: "#9db9e5" },
 ] as const;
 
 const COUNT = colors.length;
@@ -311,6 +311,9 @@ export default function ColorHero() {
     "--hero-border-outer": theme.outer,
     "--hero-glow": theme.glow,
     "--hero-ink": theme.ink,
+    "--hero-camera-stage": theme.cameraStage,
+    "--hero-camera-panel": theme.cameraPanel,
+    "--hero-camera-accent": theme.cameraAccent,
   } as CSSProperties;
 
   return (

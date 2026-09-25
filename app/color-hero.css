@@ -71,12 +71,12 @@
 .scroll-scene { position: absolute; z-index: 10; inset: 0; overflow: hidden; pointer-events: none; color: var(--hero-ink); }
 .scroll-scene-backdrop { position: absolute; inset: 0; background: radial-gradient(ellipse at 72% 43%,color-mix(in srgb,var(--hero-border-stage),var(--hero-glow) 28%) 0,var(--hero-border-stage) 54%,color-mix(in srgb,var(--hero-border-stage),#000 22%) 100%); }
 .scroll-scene-glow { position: absolute; width: 55%; aspect-ratio: 1; right: 2%; top: 7%; border-radius: 50%; background: radial-gradient(circle,color-mix(in srgb,var(--hero-glow) 28%,transparent),transparent 70%); }
-.shutter-backdrop { position: absolute; inset: 0; background: radial-gradient(ellipse at 47% 48%,#21131b 0%,#100d13 57%,#07070a 100%); }
-.camera-info-screen { position: absolute; z-index: 12; top: 0; bottom: 0; left: 48%; right: 0; pointer-events: none; background: linear-gradient(90deg,transparent,#171118 12%,#171118 100%); }
+.shutter-backdrop { position: absolute; inset: 0; background: radial-gradient(ellipse at 47% 48%,var(--hero-camera-stage) 0%,color-mix(in srgb,var(--hero-camera-stage),var(--hero-camera-panel) 55%) 57%,var(--hero-camera-panel) 100%); }
+.camera-info-screen { position: absolute; z-index: 12; top: 0; bottom: 0; left: 48%; right: 0; pointer-events: none; background: linear-gradient(90deg,transparent,var(--hero-camera-panel) 12%,var(--hero-camera-panel) 100%); }
 .shutter-copy { position: absolute; z-index: 13; top: 50%; right: 6.5%; width: 36%; max-width: 480px; color: #f7f4f7; text-align: left; pointer-events: none; translate: 0 -50%; }
-.shutter-kicker { margin: 0 0 24px; color: #c7a9b4; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',Arial,sans-serif; font-size: 11px; font-weight: 650; letter-spacing: .24em; }
+.shutter-kicker { margin: 0 0 24px; color: var(--hero-camera-accent); font-family: -apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',Arial,sans-serif; font-size: 11px; font-weight: 650; letter-spacing: .24em; }
 .shutter-copy h2 { margin: 0; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',Arial,sans-serif; font-size: clamp(44px,4.6vw,76px); line-height: .98; font-weight: 590; letter-spacing: -.065em; }
-.shutter-copy h2 em { color: #dca8b9; font-style: normal; }
+.shutter-copy h2 em { color: var(--hero-camera-accent); font-style: normal; }
 .shutter-description { max-width: 360px; margin: 30px 0 0; color: #d4c7ce; font-size: clamp(14px,1.05vw,17px); line-height: 1.6; }
 .shutter-specs { display: flex; gap: clamp(22px,3vw,54px); margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(255,240,246,.25); }
 .shutter-specs span { display: grid; gap: 4px; color: #b9aeb6; font-size: 11px; letter-spacing: .02em; }
@@ -102,7 +102,7 @@
   .color-heading { bottom: 6%; padding: 0 15px; }.color-heading h1 { font-size: clamp(36px,9vw,56px); }
   .scroll-copy { left: 8%; top: 14%; width: 84%; }.scroll-kicker { margin-bottom: 16px; font-size: 9px; }.scroll-copy h2 { font-size: clamp(45px,11vw,64px); }.scroll-description { margin-top: 17px; max-width: 290px; font-size: 12px; }.scroll-rule { margin-top: 18px; }
   .shutter-copy { top: 13%; left: 8%; right: 8%; width: 84%; max-width: none; translate: none; }.shutter-kicker { margin-bottom: 12px; font-size: 9px; }.shutter-copy h2 { font-size: clamp(30px,8vw,43px); }.shutter-copy h2 br { display: none; }.shutter-description { margin-top: 13px; max-width: 330px; font-size: 11px; line-height: 1.45; }.shutter-specs { margin-top: 15px; padding-top: 10px; gap: 28px; }.shutter-specs span { font-size: 9px; }.shutter-specs strong { font-size: 17px; }
-  .camera-info-screen { display: block; left: 0; right: 0; top: 27%; bottom: auto; height: 25%; background: linear-gradient(180deg,#171118 12%,rgba(23,17,24,.97) 26%,transparent 100%); }
+  .camera-info-screen { display: block; left: 0; right: 0; top: 27%; bottom: auto; height: 25%; background: linear-gradient(180deg,var(--hero-camera-panel) 12%,color-mix(in srgb,var(--hero-camera-panel) 97%,transparent) 26%,transparent 100%); }
   .design-placeholder { left: 8%; right: 8%; top: 43%; width: 84%; height: 48%; padding: 15px; border-radius: 21px; font-size: 8px; }
 }
 @media(max-width:420px) { .color-product { width: 84vw; }.color-card { width: 88px; height: 88px; }.color-heading h1 { font-size: 35px; }.hero-rock { width: 170%; left: -35%; } }

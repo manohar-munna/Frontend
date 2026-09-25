@@ -182,7 +182,7 @@ function makeIrisBlade(index: number) {
     const a = faceCount + arc * 2;
     triangles.push(a, a + 1, a + 2, a + 2, a + 1, a + 3);
   }
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage));
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
   for (let radial = 0; radial <= IRIS_RADIAL_STEPS; radial++) {
     for (let arc = 0; arc <= IRIS_ARC_STEPS; arc++) {
       const vertex = radial * row + arc;
@@ -203,8 +203,19 @@ function makeIrisBlade(index: number) {
   geometry.setIndex(triangles);
   geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 47);
   writeIrisClosedBlade(geometry, index);
-  geometry.userData.restPositions = new Float32Array(positions);
-  updateIrisBlade(geometry, index, 0, 0);
+  // Map the standalone cutout in each leaf's own coordinates. UVs never
+  // change during opening, so its metal grain and bevel cannot stretch.
+  const angle = -index * (Math.PI * 2 / IRIS_BLADE_COUNT);
+  const cosine = Math.cos(angle);
+  const sine = Math.sin(angle);
+  const position = geometry.getAttribute("position") as THREE.BufferAttribute;
+  const uv = geometry.getAttribute("uv") as THREE.BufferAttribute;
+  for (let vertex = 0; vertex < position.count; vertex++) {
+    const x = position.getX(vertex);
+    const y = position.getY(vertex);
+    uv.setXY(vertex, 0.5 + (cosine * x - sine * y) / 100, 0.5 + (sine * x + cosine * y) / 100);
+  }
+  uv.needsUpdate = true;
   return geometry;
 }
 
@@ -251,22 +262,6 @@ function writeIrisClosedBlade(geometry: THREE.BufferGeometry, index: number) {
   }
   attribute.needsUpdate = true;
   geometry.computeVertexNormals();
-}
-
-function updateIrisBlade(geometry: THREE.BufferGeometry, index: number, closure: number, reopening: number) {
-  const rest = geometry.userData.restPositions as Float32Array;
-  const position = geometry.getAttribute("position") as THREE.BufferAttribute;
-  const apertureRadius = THREE.MathUtils.lerp(THREE.MathUtils.lerp(45.7, 4.2, closure), 19.6, reopening);
-  const travel = apertureRadius - 4.2;
-  const direction = (index + 0.5) * (Math.PI * 2 / IRIS_BLADE_COUNT);
-  const dx = Math.cos(direction) * travel;
-  const dy = Math.sin(direction) * travel;
-  for (let vertex = 0; vertex < position.count; vertex++) {
-    const offset = vertex * 3;
-    position.setXYZ(vertex, rest[offset] + dx, rest[offset + 1] + dy, rest[offset + 2]);
-  }
-  position.needsUpdate = true;
-  // Translation leaves the face normals and the extruded leading edge intact.
 }
 
 function makeIrisSeam(blade: THREE.BufferGeometry) {
@@ -367,9 +362,10 @@ function updateIrisLip(geometry: THREE.BufferGeometry, blade: THREE.BufferGeomet
   lip.needsUpdate = true;
 }
 
-function clipIrisMaterial(material: THREE.Material) {
+function clipIrisMaterial(material: THREE.Material, bladeOffset: THREE.Vector2) {
   material.onBeforeCompile = (shader) => {
-    shader.vertexShader = shader.vertexShader.replace("void main() {", "varying vec2 vIrisLocal; void main() { vIrisLocal = position.xy;");
+    shader.uniforms.uBladeOffset = { value: bladeOffset };
+    shader.vertexShader = shader.vertexShader.replace("void main() {", "uniform vec2 uBladeOffset; varying vec2 vIrisLocal; void main() { vIrisLocal = position.xy + uBladeOffset;");
     shader.fragmentShader = shader.fragmentShader.replace("void main() {", "varying vec2 vIrisLocal; void main() { if (dot(vIrisLocal, vIrisLocal) > 45.7 * 45.7) discard;");
   };
 }
@@ -429,29 +425,6 @@ function makeMicroGrain() {
   return grain;
 }
 
-function makeIrisGrain() {
-  const side = 512;
-  const pixels = new Uint8Array(side * side * 4);
-  let seed = 497163;
-  for (let i = 0; i < side * side; i++) {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    const fine = (seed >>> 24) / 255;
-    let coarseSeed = (Math.imul(i % side >> 3, 73856093) ^ Math.imul(Math.floor(i / side) >> 3, 19349663)) >>> 0;
-    coarseSeed ^= coarseSeed >>> 13;
-    const coarse = (coarseSeed & 255) / 255;
-    const grain = Math.round(185 + 46 * (coarse - 0.5) + 11 * (fine - 0.5));
-    pixels.set([grain, grain, grain + 2, 255], i * 4);
-  }
-  const texture = new THREE.DataTexture(pixels, side, side, THREE.RGBAFormat);
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(0.008, 0.008);
-  texture.magFilter = THREE.LinearFilter;
-  texture.minFilter = THREE.LinearMipmapLinearFilter;
-  texture.generateMipmaps = true;
-  texture.needsUpdate = true;
-  return texture;
-}
-
 type ModelState = {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
@@ -468,7 +441,7 @@ type ModelState = {
   grain: THREE.Texture;
   bladeTexture: THREE.Texture;
   irisAssembly: THREE.Group;
-  irisBlades: { geometry: THREE.BufferGeometry; material: THREE.MeshPhysicalMaterial; seam: THREE.BufferGeometry; seamMaterial: THREE.ShaderMaterial; edge: THREE.BufferGeometry; edgeMaterial: THREE.MeshBasicMaterial; lip: THREE.BufferGeometry; lipMaterial: THREE.MeshPhysicalMaterial }[];
+  irisBlades: { group: THREE.Group; offset: THREE.Vector2; geometry: THREE.BufferGeometry; material: THREE.MeshPhysicalMaterial; seam: THREE.BufferGeometry; seamMaterial: THREE.ShaderMaterial; edge: THREE.BufferGeometry; edgeMaterial: THREE.MeshBasicMaterial; lip: THREE.BufferGeometry; lipMaterial: THREE.MeshPhysicalMaterial }[];
   irisMotion: number;
   shutterRings: THREE.MeshPhysicalMaterial[];
   photos: Photos;
@@ -511,12 +484,13 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
   state.irisAssembly.rotation.z = 0.2 * (closure - reopening);
   const motion = closure + reopening;
   if (Math.abs(state.irisMotion - motion) > 0.0001) {
+    const radius = THREE.MathUtils.lerp(THREE.MathUtils.lerp(45.7, 4.2, closure), 19.6, reopening);
+    const travel = radius - 4.2;
     for (let index = 0; index < state.irisBlades.length; index++) {
       const blade = state.irisBlades[index];
-      updateIrisBlade(blade.geometry, index, closure, reopening);
-      updateIrisSeam(blade.seam, blade.geometry);
-      updateIrisOverlapEdge(blade.edge, blade.geometry);
-      updateIrisLip(blade.lip, blade.geometry);
+      const direction = (index + 0.5) * (Math.PI * 2 / IRIS_BLADE_COUNT);
+      blade.offset.set(Math.cos(direction) * travel, Math.sin(direction) * travel);
+      blade.group.position.set(blade.offset.x, blade.offset.y, 0);
     }
     state.irisMotion = motion;
   }
@@ -561,7 +535,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
     let renderFrame = 0;
     let state: ModelState | null = null;
     const loader = new THREE.TextureLoader();
-    const sources = [...names.map((name) => finishes[name].rear), "/assets/iphone-side-burgundy-v3.png", "/assets/iphone-front-burgundy-v3.png", "/assets/optical-glass-v1.webp", "/assets/sensor-glass.webp"];
+    const sources = [...names.map((name) => finishes[name].rear), "/assets/iphone-side-burgundy-v3.png", "/assets/iphone-front-burgundy-v3.png", "/assets/optical-glass-v1.webp", "/assets/sensor-glass.webp", "/assets/iris-blade-cutout-v2.webp"];
 
     async function start() {
       const loaded = await Promise.all(sources.map((src) => loader.loadAsync(src)));
@@ -644,7 +618,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       add(new THREE.ShapeGeometry(roundedShape(276, 286, 50), 32), deckFinish, deckX, deckY, D / 2 + 16.85);
       const barrelBlack = detail(0x080a0d, 0.44, 0.24);
       const polishedEdge = detail(new THREE.Color(finishes[initial].frame).lerp(new THREE.Color(0x111316), 0.52), 0.78, 0.24);
-      const bladeTexture = makeIrisGrain();
+      const bladeTexture = loaded[9];
       const opticalTexture = loaded[7];
       const sensorTexture = loaded[8];
       const opticalGlass = makeOpticalGlass(opticalTexture);
@@ -710,54 +684,53 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       addDeckDetail(new THREE.TorusGeometry(4.1, 0.8, 8, 48), microphoneRing, 7, 319, D / 2 + 22.5);
       addDeckDetail(new THREE.CircleGeometry(3.3, 48), barrelBlack, 7, 319, D / 2 + 23);
 
-      // Six individual curved metal leaves reveal the recessed optical glass.
-      // Their inner edges form the changing aperture; the meshes carry real
-      // surface normals and thickness rather than a drawn shutter texture.
+      // Six independent cutout leaves reveal the original recessed glass.
+      // Each leaf keeps its own photo texture, 3D thickness, edge, and shadow.
       const irisAssembly = new THREE.Group();
       irisAssembly.position.set(-170, 465, D / 2 + 40.4);
       phone.add(irisAssembly);
-      const bladePalette = [0x222326, 0x28292c, 0x212225, 0x26272a, 0x232427, 0x29292d];
+      const bladePalette = [0xe0e0e2, 0xd8d8db, 0xe4e4e6, 0xdadade, 0xe1e1e4, 0xd6d6da];
       const irisBlades = bladePalette.map((color, index) => {
+        const group = new THREE.Group();
+        const offset = new THREE.Vector2();
+        irisAssembly.add(group);
         const geometry = makeIrisBlade(index);
-        const material = new THREE.MeshPhysicalMaterial({ color, map: bladeTexture, vertexColors: true, metalness: 0.1, roughness: 0.91, clearcoat: 0, bumpMap: bladeTexture, bumpScale: 0.14, envMap: environment.texture, envMapIntensity: 0.08, side: THREE.DoubleSide, depthWrite: true });
+        const material = new THREE.MeshPhysicalMaterial({ color, map: bladeTexture, alphaTest: 0.16, vertexColors: true, metalness: 0.18, roughness: 0.84, clearcoat: 0, bumpMap: bladeTexture, bumpScale: 0.05, envMap: environment.texture, envMapIntensity: 0.06, side: THREE.DoubleSide, depthWrite: true });
         material.onBeforeCompile = (shader) => {
-          shader.vertexShader = shader.vertexShader.replace("void main() {", "varying vec2 vIrisGrain; void main() { vIrisGrain = position.xy;");
-          shader.fragmentShader = shader.fragmentShader.replace("void main() {", "varying vec2 vIrisGrain; void main() { if (dot(vIrisGrain, vIrisGrain) > 45.7 * 45.7) discard;");
-          shader.fragmentShader = shader.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
-            float grain = fract(sin(dot(floor(vIrisGrain * 4.0), vec2(127.1, 311.7))) * 43758.5453);
-            float fineGrain = fract(sin(dot(floor(vIrisGrain * 11.0), vec2(269.5, 183.3))) * 43758.5453);
-            diffuseColor.rgb *= 0.82 + 0.23 * grain + 0.06 * fineGrain;`);
+          shader.uniforms.uBladeOffset = { value: offset };
+          shader.vertexShader = shader.vertexShader.replace("void main() {", "uniform vec2 uBladeOffset; varying vec2 vIrisClip; void main() { vIrisClip = position.xy + uBladeOffset;");
+          shader.fragmentShader = shader.fragmentShader.replace("void main() {", "varying vec2 vIrisClip; void main() { if (dot(vIrisClip, vIrisClip) > 45.7 * 45.7) discard;");
         };
         const mesh = new THREE.Mesh(geometry, material);
         mesh.frustumCulled = false;
-        irisAssembly.add(mesh);
+        group.add(mesh);
         mesh.renderOrder = 5 + index;
         const seam = makeIrisSeam(geometry);
         const seamMaterial = new THREE.ShaderMaterial({
-          uniforms: { uOpacity: { value: 0 } },
-          vertexShader: `varying vec2 vUv; varying vec2 vIrisLocal; void main() { vUv = uv; vIrisLocal = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+          uniforms: { uOpacity: { value: 0 }, uBladeOffset: { value: offset } },
+          vertexShader: `uniform vec2 uBladeOffset; varying vec2 vUv; varying vec2 vIrisLocal; void main() { vUv = uv; vIrisLocal = position.xy + uBladeOffset; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
           fragmentShader: `uniform float uOpacity; varying vec2 vUv; varying vec2 vIrisLocal; void main() { if (dot(vIrisLocal, vIrisLocal) > 45.7 * 45.7) discard; float falloff = pow(1.0 - vUv.x, 1.45); gl_FragColor = vec4(vec3(0.001, 0.001, 0.002), uOpacity * falloff); }`,
           side: THREE.DoubleSide, transparent: true, depthWrite: false,
         });
         const seamMesh = new THREE.Mesh(seam, seamMaterial);
         seamMesh.frustumCulled = false;
         seamMesh.renderOrder = 11 + index;
-        irisAssembly.add(seamMesh);
+        group.add(seamMesh);
         const edge = makeIrisOverlapEdge(geometry);
         const edgeMaterial = new THREE.MeshBasicMaterial({ color: 0x4b4b50, side: THREE.DoubleSide, transparent: true, opacity: 0.38, depthWrite: false });
-        clipIrisMaterial(edgeMaterial);
+        clipIrisMaterial(edgeMaterial, offset);
         const edgeMesh = new THREE.Mesh(edge, edgeMaterial);
         edgeMesh.frustumCulled = false;
         edgeMesh.renderOrder = 17 + index;
-        irisAssembly.add(edgeMesh);
+        group.add(edgeMesh);
         const lip = makeIrisLip(geometry);
         const lipMaterial = new THREE.MeshPhysicalMaterial({ color: 0x35363a, metalness: 0.52, roughness: 0.62, envMap: environment.texture, envMapIntensity: 0.35, side: THREE.DoubleSide, transparent: true, opacity: 0, depthWrite: false });
-        clipIrisMaterial(lipMaterial);
+        clipIrisMaterial(lipMaterial, offset);
         const lipMesh = new THREE.Mesh(lip, lipMaterial);
         lipMesh.frustumCulled = false;
         lipMesh.renderOrder = 23 + index;
-        irisAssembly.add(lipMesh);
-        return { geometry, material, seam, seamMaterial, edge, edgeMaterial, lip, lipMaterial };
+        group.add(lipMesh);
+        return { group, offset, geometry, material, seam, seamMaterial, edge, edgeMaterial, lip, lipMaterial };
       });
       const shutterRings = [
         new THREE.MeshPhysicalMaterial({ color: 0x090b0e, metalness: 0.62, roughness: 0.32, clearcoat: 0.6, transparent: true, opacity: 0, depthWrite: false }),
