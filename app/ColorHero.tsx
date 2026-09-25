@@ -248,10 +248,10 @@ export default function ColorHero() {
   const shutterPhase = smoothstep(clamp01((cameraProgress - 0.75) / 0.23));
   const scenePeek = smoothstep(clamp01((scrollProgress - 0.59) / 0.035));
   const apertureOpen = 0;
-  const sceneExpansion = smoothstep(clamp01((scrollProgress - 0.785) / 0.05));
+  const sceneExpansion = smoothstep(clamp01((scrollProgress - 0.785) / 0.04));
   const lensTravel = smoothstep(clamp01((scrollProgress - 0.65) / 0.135));
   const depthReveal = smoothstep(clamp01((scrollProgress - 0.84) / 0.035));
-  const phoneSettle = smoothstep(clamp01((scrollProgress - 0.835) / 0.04));
+  const phoneSettle = smoothstep(clamp01((scrollProgress - 0.825) / 0.06));
   const displayReveal = smoothstep(clamp01((phoneSettle - 0.62) / 0.38));
   const cameraCopyFade = 1 - smoothstep(clamp01((scrollProgress - 0.615) / 0.035));
   const lensReveal = smoothstep(clamp01((lensPhase - 0.05) / 0.28));
@@ -263,12 +263,13 @@ export default function ColorHero() {
   const mobile = panelSize.width < 670;
   const phoneWidth = Math.min(panelSize.width * (mobile ? 0.72 : 0.28), panelSize.height * (mobile ? 0.68 / 2.1 : 0.43));
   const phoneHeight = Math.min(panelSize.height * (mobile ? 0.68 : 0.83), phoneWidth * 2.1);
-  const phoneWidthSettle = smoothstep(clamp01(phoneSettle / 0.78));
+  const phoneWidthSettle = Math.pow(phoneSettle, 0.72);
   const sceneWidth = mix(panelSize.width, phoneWidth, phoneWidthSettle);
   const sceneHeight = mix(panelSize.height, phoneHeight, phoneSettle);
   const sceneLeft = (panelSize.width - sceneWidth) / 2;
   const sceneTop = (panelSize.height - sceneHeight) / 2;
-  const frameOpacity = smoothstep(clamp01((phoneSettle - 0.45) / 0.45));
+  const frameOpacity = smoothstep(clamp01((phoneSettle - 0.72) / 0.28));
+  const showModel = modelReady && entranceDone;
   // The 3D rear remains the same object from the opening pose through the turn.
   const assetScale = Math.min(productSize.width / 1200, productSize.height / 1310);
   const artWidth = 1200 * assetScale;
@@ -385,10 +386,10 @@ export default function ColorHero() {
                   opacity: 1 - companionExit,
                   transform: `translate3d(${-artWidth * 0.3 * companionExit}px, ${artHeight * 0.015 * companionExit}px, 0)`,
                 } : {
-                  opacity: modelReady ? 0 : 1,
+                  opacity: showModel ? 0 : 1,
                 }}>
                   <div className="product-layer-source">
-                    {colors.map((color, index) => ({ color, index })).filter(({ index }) => part === "companion" || !modelReady || index === active || index === outgoing).map(({ color, index }) => (
+                    {colors.map((color, index) => ({ color, index })).filter(({ index }) => part === "companion" || !showModel || index === active || index === outgoing).map(({ color, index }) => (
                       <Image
                         key={color.name}
                         src={color.image}
@@ -403,8 +404,8 @@ export default function ColorHero() {
                   </div>
                 </div>
               ))}
-              <div className="three-phone-layer" style={{ opacity: modelReady ? 1 : 0, width: "500%", height: "300%", left: "-200%", top: "-100%" }}>
-                <ThreePhone color={theme.name} turn={turn} lensPhase={lensPhase} shutterPhase={shutterPhase} apertureOpen={apertureOpen} scenePeek={scenePeek} lensTravel={lensTravel} sceneExpansion={sceneExpansion} compact={mobile} onReady={handleModelReady} />
+              <div className="three-phone-layer" style={{ opacity: showModel ? 1 : 0, width: "500%", height: "300%", left: "-200%", top: "-100%" }}>
+                <ThreePhone color={theme.name} turn={turn} lensPhase={lensPhase} shutterPhase={shutterPhase} apertureOpen={apertureOpen} scenePeek={scenePeek} lensTravel={lensTravel} sceneExpansion={sceneExpansion} compact={mobile} layoutReady={entranceDone} onReady={handleModelReady} />
               </div>
             </div>
           </div>
@@ -494,13 +495,14 @@ export default function ColorHero() {
               <div className="skate-board-layer" style={{ marginTop: `${-depthReveal * 18}px` }}><Image src="/assets/skate-board-v1.png" alt="" unoptimized width={1536} height={1024} sizes="(max-width: 700px) 75vw, 34vw" /></div>
               <div className="skate-rider-layer" style={{ marginTop: `${-depthReveal * 18}px` }}><Image src="/assets/skate-rider-v1.png" alt="" unoptimized width={1024} height={1536} sizes="(max-width: 700px) 90vw, 50vw" /></div>
             </button>
-            <div className="skate-camera-ui" style={{ opacity: displayReveal }} aria-hidden="true">
+            <div className="skate-camera-ui" style={{ opacity: displayReveal * 0.84 }} aria-hidden="true">
               <span className="skate-camera-grid" />
-              <div className="skate-camera-top"><span className="skate-camera-flash">⚡</span><span className="skate-camera-top-center">⌃</span><span className="skate-camera-aspect">RAW&nbsp; 48MP</span><span className="skate-camera-settings">◎</span></div>
+              <div className="skate-camera-top"><span className="skate-camera-flash">ϟ</span><span className="skate-camera-top-center">⌃</span><span className="skate-camera-settings">◎</span></div>
               <div className="skate-camera-bottom">
-                <div className="skate-camera-zoom"><span>0.5</span><strong>1×</strong><span>2</span></div>
+                <div className="skate-camera-zoom"><span>0.5</span><strong>1×</strong></div>
                 <div className="skate-camera-modes"><span>CINEMATIC</span><span>VIDEO</span><strong>PHOTO</strong><span>PORTRAIT</span><span>PANO</span></div>
-                <div className="skate-camera-controls"><span className="skate-camera-gallery" /><span className="skate-camera-shutter" /><span className="skate-camera-flip">↻</span></div>
+                <div className="skate-camera-controls"><span className="skate-camera-shutter" /></div>
+                <span className="skate-camera-home" />
               </div>
             </div>
             </div>

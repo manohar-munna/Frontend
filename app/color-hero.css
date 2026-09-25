@@ -90,28 +90,26 @@
 .skate-background { position: absolute; inset: 0; will-change: transform; }
 .skate-background img { object-fit: cover; }
 .skate-camera-ui { position: absolute; z-index: 6; inset: 0; color: #fff; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',Arial,sans-serif; pointer-events: none; text-shadow: 0 1px 5px rgba(0,0,0,.65); }
-.skate-camera-grid { position: absolute; inset: 0; background-image: linear-gradient(to right,transparent calc(100% - 1px),rgba(255,255,255,.28) 100%),linear-gradient(to bottom,transparent calc(100% - 1px),rgba(255,255,255,.28) 100%); background-size: 33.333% 100%,100% 33.333%; opacity: .53; }
-.skate-camera-top { position: absolute; inset: 0 0 auto; height: 18%; min-height: 78px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 44px 18px 0; background: linear-gradient(180deg,rgba(17,7,32,.86),rgba(28,11,47,.54) 65%,transparent); font-size: 10px; font-weight: 650; letter-spacing: .07em; }
-.skate-camera-top-center { position: absolute; left: 50%; top: 41px; translate: -50% 0; font-size: 18px; line-height: 12px; }
-.skate-camera-flash,.skate-camera-settings { font-size: 17px; line-height: 15px; font-weight: 400; }
-.skate-camera-aspect { margin-left: auto; font-size: 9px; }
-.skate-camera-bottom { position: absolute; inset: auto 0 0; height: 28%; min-height: 168px; background: linear-gradient(180deg,transparent,rgba(16,7,29,.63) 24%,rgba(14,6,25,.91) 62%,rgba(12,5,22,.96)); }
+.skate-camera-grid { position: absolute; inset: 0; background-image: linear-gradient(to right,transparent calc(100% - 1px),rgba(255,255,255,.18) 100%),linear-gradient(to bottom,transparent calc(100% - 1px),rgba(255,255,255,.18) 100%); background-size: 33.333% 100%,100% 33.333%; opacity: .35; }
+.skate-camera-top { position: absolute; inset: 0 0 auto; height: 17%; min-height: 78px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 45px 23px 0; background: linear-gradient(180deg,rgba(16,19,20,.64),rgba(20,23,23,.48) 72%,transparent); font-size: 10px; font-weight: 650; letter-spacing: .07em; }
+.skate-camera-top-center { position: absolute; left: 50%; top: 42px; translate: -50% 0; font-size: 18px; line-height: 12px; }
+.skate-camera-flash,.skate-camera-settings { display: grid; place-items: center; width: 19px; height: 19px; border: 1px solid rgba(255,255,255,.45); border-radius: 50%; font-size: 14px; line-height: 1; font-weight: 400; }
+.skate-camera-bottom { position: absolute; inset: auto 0 0; height: 27%; min-height: 168px; background: linear-gradient(180deg,transparent,rgba(20,23,22,.46) 22%,rgba(18,21,20,.72) 65%,rgba(15,18,17,.77)); }
 .skate-camera-zoom { position: absolute; top: -4px; left: 50%; translate: -50% 0; display: flex; align-items: center; gap: 10px; font-size: 10px; }
 .skate-camera-zoom span { opacity: .8; }
-.skate-camera-zoom strong { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 50%; background: rgba(21,16,27,.82); color: #f5d686; font-size: 11px; font-weight: 700; }
+.skate-camera-zoom strong { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 50%; background: rgba(21,24,21,.76); color: #ffdc67; font-size: 11px; font-weight: 700; }
 .skate-camera-modes { position: absolute; top: 33px; left: 50%; translate: -50% 0; display: flex; align-items: center; justify-content: center; gap: clamp(8px,1.4vw,18px); white-space: nowrap; font-size: 8px; font-weight: 650; letter-spacing: .025em; }
 .skate-camera-modes span { opacity: .72; }
 .skate-camera-modes strong { color: #ffda63; font-size: 8px; }
-.skate-camera-controls { position: absolute; inset: auto 22px 15px; display: flex; align-items: center; justify-content: space-between; }
-.skate-camera-gallery { width: 31px; height: 31px; border: 1px solid rgba(255,255,255,.7); border-radius: 5px; background: url('/assets/skate-city-v1.png') center / cover; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
-.skate-camera-shutter { width: 61px; height: 61px; border: 3px solid #fff; border-radius: 50%; background: #f9fafb; box-shadow: inset 0 0 0 3px #202127,0 2px 8px rgba(0,0,0,.45); }
-.skate-camera-flip { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: rgba(45,41,54,.62); font-size: 25px; line-height: 1; }
+.skate-camera-controls { position: absolute; inset: auto 0 28px; display: flex; align-items: center; justify-content: center; }
+.skate-camera-shutter { width: 59px; height: 59px; border: 3px solid #fff; border-radius: 50%; background: #f9fafb; box-shadow: inset 0 0 0 3px #202127,0 2px 8px rgba(0,0,0,.3); }
+.skate-camera-home { position: absolute; left: 50%; bottom: 9px; translate: -50% 0; width: 30%; height: 4px; border-radius: 999px; background: rgba(255,255,255,.7); }
 .skate-phone-frame { position: absolute; z-index: 22; box-sizing: border-box; border: 7px solid color-mix(in srgb,var(--hero-phone-frame) 79%,#0a0a10); background: transparent; box-shadow: 0 0 0 2px #0b0b0f,inset 0 0 0 2px #08090b,0 28px 55px rgba(0,0,0,.48),0 4px 14px rgba(0,0,0,.55); pointer-events: none; }
 .skate-phone-frame:before,.skate-phone-frame:after { content: ''; position: absolute; top: 25%; width: 3px; height: 11%; border-radius: 3px; background: linear-gradient(90deg,#18151a,color-mix(in srgb,var(--hero-phone-frame) 85%,#b6a2a3),#151318); box-shadow: 0 1px 2px rgba(0,0,0,.75); }
 .skate-phone-frame:before { left: -11px; }.skate-phone-frame:after { right: -11px; top: 31%; height: 14%; }
 .skate-phone-island { position: absolute; z-index: 3; left: 50%; top: 15px; translate: -50% 0; width: 29%; height: 23px; border: 1px solid #28262d; border-radius: 999px; background: #060709; box-shadow: inset 0 2px 5px rgba(0,0,0,.9),0 1px 3px rgba(0,0,0,.35); }
-.skate-island-lens { position: absolute; right: 13%; top: 50%; translate: 0 -50%; width: 13px; height: 13px; border: 1px solid #252d38; border-radius: 50%; background: radial-gradient(circle at 37% 34%,#7a8298 0 5%,#292c48 12%,#080c19 32%,#02050c 61%,#141b28 72%,#010204 100%); box-shadow: 0 0 0 1px #06090d,inset 0 0 2px rgba(157,174,215,.45); }
-.skate-island-lens:after { content: ''; position: absolute; left: 27%; top: 20%; width: 3px; height: 3px; border-radius: 50%; background: rgba(225,237,255,.68); filter: blur(.4px); }
+.skate-island-lens { position: absolute; right: 13%; top: 50%; translate: 0 -50%; width: 9px; height: 9px; border: 1px solid #121820; border-radius: 50%; background: radial-gradient(circle at 38% 33%,#343a4d 0 6%,#0a0e18 25%,#020409 64%,#101621 82%,#010204 100%); box-shadow: 0 0 0 1px #050709,inset 0 0 2px rgba(106,124,163,.2); }
+.skate-island-lens:after { content: ''; position: absolute; left: 28%; top: 20%; width: 2px; height: 2px; border-radius: 50%; background: rgba(170,184,211,.4); filter: blur(.5px); }
 .skate-subject { position: absolute; z-index: 2; width: clamp(470px,49vw,700px); aspect-ratio: 1; padding: 0; border: 0; appearance: none; background: transparent; color: inherit; transform-origin: center top; pointer-events: none; outline: none; transform-style: preserve-3d; will-change: transform,left,top; }
 .skate-subject.is-interactive { pointer-events: auto; cursor: pointer; }
 .skate-subject:focus-visible { outline: 2px solid #fff9ec; outline-offset: 8px; border-radius: 24px; }
@@ -169,10 +167,10 @@
   .display-details-specs strong { font-size: 13px; }
   .display-details-specs span { text-align: left; }
   .skate-subject { width: min(104vw,470px); }
-  .skate-phone-frame { border-width: 5px; }.skate-phone-island { top: 11px; height: 19px; }.skate-island-lens { width: 10px; height: 10px; }
+  .skate-phone-frame { border-width: 5px; }.skate-phone-island { top: 11px; height: 19px; }.skate-island-lens { width: 8px; height: 8px; }
   .skate-camera-top { min-height: 64px; padding: 35px 12px 0; font-size: 8px; }.skate-camera-top-center { top: 33px; }
   .skate-camera-bottom { min-height: 135px; }.skate-camera-modes { gap: 8px; font-size: 7px; }.skate-camera-modes strong { font-size: 7px; }
-  .skate-camera-shutter { width: 49px; height: 49px; }.skate-camera-controls { inset: auto 16px 13px; }
+  .skate-camera-shutter { width: 49px; height: 49px; }.skate-camera-controls { inset: auto 0 26px; }
   .design-placeholder { left: 8%; right: 8%; top: 43%; width: 84%; height: 48%; padding: 15px; border-radius: 21px; font-size: 8px; }
 }
 @media(max-width:420px) { .color-product { width: 84vw; }.color-card { width: 88px; height: 88px; }.color-heading h1 { font-size: 35px; }.hero-rock { width: 170%; left: -35%; } }

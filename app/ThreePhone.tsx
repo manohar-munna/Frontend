@@ -622,7 +622,7 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
   state.render();
 }
 
-export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compact, apertureOpen = 0, scenePeek = 0, lensTravel = 0, sceneExpansion = 0, onReady }: { color: string; turn: number; lensPhase: number; shutterPhase: number; compact: boolean; apertureOpen?: number; scenePeek?: number; lensTravel?: number; sceneExpansion?: number; onReady?: (ready: boolean) => void }) {
+export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compact, apertureOpen = 0, scenePeek = 0, lensTravel = 0, sceneExpansion = 0, layoutReady, onReady }: { color: string; turn: number; lensPhase: number; shutterPhase: number; compact: boolean; apertureOpen?: number; scenePeek?: number; lensTravel?: number; sceneExpansion?: number; layoutReady: boolean; onReady?: (ready: boolean) => void }) {
   const mountRef = useRef<HTMLDivElement>(null);
   const latest = useRef({ color, turn, lensPhase, shutterPhase, compact, apertureOpen, scenePeek, lensTravel, sceneExpansion });
   latest.current = { color, turn, lensPhase, shutterPhase, compact, apertureOpen, scenePeek, lensTravel, sceneExpansion };
@@ -1037,7 +1037,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
     const state = stateRef.current;
     if (!state) return;
     setPhonePose(state, turn, lensPhase, shutterPhase, compact, apertureOpen, scenePeek, lensTravel, sceneExpansion);
-  }, [turn, lensPhase, shutterPhase, compact, apertureOpen, scenePeek, lensTravel, sceneExpansion]);
+  }, [turn, lensPhase, shutterPhase, compact, apertureOpen, scenePeek, lensTravel, sceneExpansion, layoutReady]);
 
   return <div ref={mountRef} className="three-phone" aria-hidden="true" />;
 }
