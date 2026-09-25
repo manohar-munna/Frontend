@@ -396,7 +396,7 @@ export default function ColorHero() {
               <span>{theme.name.toUpperCase()}</span><span>18 / PRO</span>
             </div>
           </div>
-          <div className="camera-info-screen" style={{ opacity: smoothstep(clamp01((shutterPhase - 0.27) / 0.35)) }} />
+          <div className="camera-info-screen" style={{ opacity: smoothstep(clamp01((shutterPhase - 0.08) / 0.27)) }} />
           <div className="shutter-copy" style={{ opacity: smoothstep(clamp01((shutterPhase - 0.4) / 0.45)), transform: `translateY(${Number(((1 - shutterPhase) * 26).toFixed(2))}px)` }}>
             <p className="shutter-kicker">02 / THE CAMERA</p>
             <h2>Light, under<br /><em>control.</em></h2>
