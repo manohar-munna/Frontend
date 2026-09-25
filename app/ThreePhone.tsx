@@ -568,6 +568,7 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
     uniforms.uPanelSize.value.set(width, height);
     uniforms.uReveal.value = scenePeek;
     uniforms.uExpansion.value = sceneExpansion;
+    uniforms.uTravel.value = lensTravel;
     uniforms.uPreviewScale.value = height / (2 * coverRadius);
   }
   const detailReveal = THREE.MathUtils.smoothstep(shutterPhase, 0.08, 0.56);
@@ -855,6 +856,28 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
         new THREE.MeshPhysicalMaterial({ color: 0x090b0e, metalness: 0.62, roughness: 0.32, clearcoat: 0.6, transparent: true, opacity: 0, depthWrite: false }),
         new THREE.MeshPhysicalMaterial({ color: 0x26272b, metalness: 0.54, roughness: 0.36, clearcoat: 0.32, transparent: true, opacity: 0, depthWrite: false }),
       ];
+      // The existing retaining surfaces catch the same off-axis source at
+      // their own depths. Highlights move slightly as the viewer approaches.
+      for (const [index, material] of shutterRings.entries()) {
+        material.onBeforeCompile = (shader) => {
+          shader.uniforms.uPhotoReveal = skate.material.uniforms.uReveal;
+          shader.uniforms.uLensTravel = skate.material.uniforms.uTravel;
+          shader.vertexShader = shader.vertexShader.replace("void main() {", "varying vec2 vRimPoint; void main() { vRimPoint = position.xy;");
+          shader.fragmentShader = shader.fragmentShader.replace("void main() {", "varying vec2 vRimPoint; uniform float uPhotoReveal; uniform float uLensTravel; void main() {");
+          shader.fragmentShader = shader.fragmentShader.replace("#include <emissivemap_fragment>", `
+            #include <emissivemap_fragment>
+            vec2 rimDirection = normalize(vRimPoint);
+            float angle = .08 * uLensTravel + ${index === 0 ? "0." : ".025"};
+            vec2 key = vec2(-.71 + angle, .71);
+            vec2 bounce = vec2(.94, -.34 - angle);
+            float keyGlare = exp(-dot(rimDirection - key, rimDirection - key) * 180.);
+            float returnGlare = exp(-dot(rimDirection - bounce, rimDirection - bounce) * 220.);
+            float polishedFace = pow(max(normal.z, 0.), 3.);
+            totalEmissiveRadiance += uPhotoReveal * polishedFace
+              * (vec3(1.7, 1.2, .68) * keyGlare + vec3(.38, .24, .51) * returnGlare);
+          `);
+        };
+      }
       // Recessed glass, interleaved leaves, and forward retaining ring occupy
       // separate depth planes, so the macro zoom keeps a visible well.
       add(new THREE.TorusGeometry(52.5, 0.65, 16, 256), shutterRings[0], -170, 465, D / 2 + 44);

@@ -54,30 +54,37 @@ export function createSkateOptics(images: HTMLImageElement[], cityTexture: THREE
       uReveal: { value: 0 },
       uCanvasRect: { value: new THREE.Vector4() },
       uExpansion: { value: 0 },
+      uTravel: { value: 0 },
       uPreviewScale: { value: 0.82 },
     },
     vertexShader: `varying vec4 vClip; varying vec2 vUv;
       void main() { vUv = uv; vClip = projectionMatrix * modelViewMatrix * vec4(position, 1.); gl_Position = vClip; }`,
-    fragmentShader: `uniform sampler2D uPhoto; uniform sampler2D uCity; uniform vec2 uPanelSize; uniform float uCityAspect; uniform float uReveal; uniform float uExpansion; uniform float uPreviewScale;
+    fragmentShader: `uniform sampler2D uPhoto; uniform sampler2D uCity; uniform vec2 uPanelSize; uniform float uCityAspect; uniform float uReveal; uniform float uExpansion; uniform float uPreviewScale; uniform float uTravel;
       uniform vec4 uCanvasRect; varying vec4 vClip; varying vec2 vUv;
       void main() {
         vec2 screen = vClip.xy / vClip.w * .5 + .5;
         screen.y = 1. - screen.y;
         vec2 panel = uCanvasRect.xy + screen * uCanvasRect.zw;
-        // The preview stays fixed in lens coordinates during the entire dive.
-        // Only after the pupil surrounds the viewport do we enter the scene.
+        // The scene stays on the recessed optic throughout the dive. Its
+        // refraction and composition settle progressively as we approach.
         vec2 p = (vUv - .5) * 2.;
         float r2 = min(dot(p, p), 1.);
-        float spherical = 1. - smoothstep(0., .9, uExpansion);
+        // Refraction relaxes as we approach the optic, before it fills the
+        // viewport. Glass reflections have a separate, slightly later exit.
+        float spherical = 1. - smoothstep(.12, .78, uTravel);
+        float glassPresence = 1. - smoothstep(.82, 1., uTravel);
         // Radial compression and off-axis refraction bend the skyline and
         // skater together across the glass, strongest at the curved shoulder.
         vec2 bent = p * (.64 + .36 * r2);
         bent.y += .22 * p.x * p.x * (1. - p.y * p.y);
-        vec2 lensUv = bent * .5 + .5;
+        vec2 lensUv = mix(p, bent, spherical) * .5 + .5;
         vec2 previewPhoto = (vec2(lensUv.x, 1. - lensUv.y) - .5) / (uPreviewScale * vec2(uPanelSize.x / uPanelSize.y, 1.)) + .5;
-        vec2 photo = mix(previewPhoto, panel / uPanelSize, uExpansion);
-        vec2 backgroundUv = mix(lensUv, vec2(panel.x / uPanelSize.x, 1. - panel.y / uPanelSize.y), uExpansion);
-        float frameAspect = mix(1., uPanelSize.x / uPanelSize.y, uExpansion);
+        // Finish the framing during the push as well, so arriving at the
+        // photograph never triggers a second flattening or rescaling beat.
+        float framing = max(uExpansion, smoothstep(.55, 1., uTravel));
+        vec2 photo = mix(previewPhoto, panel / uPanelSize, framing);
+        vec2 backgroundUv = mix(lensUv, vec2(panel.x / uPanelSize.x, 1. - panel.y / uPanelSize.y), framing);
+        float frameAspect = mix(1., uPanelSize.x / uPanelSize.y, framing);
         vec2 cover = vec2(min(1., frameAspect / uCityAspect), min(1., uCityAspect / frameAspect));
         backgroundUv = (backgroundUv - .5) * cover + .5;
         vec3 background = texture2D(uCity, backgroundUv).rgb;
@@ -97,13 +104,22 @@ export function createSkateOptics(images: HTMLImageElement[], cityTexture: THREE
         float crescent = exp(-pow((radius - .91) * 27., 2.));
         float innerReturn = exp(-pow((radius - .77) * 32., 2.));
         float rim = crescent + .32 * innerReturn;
-        vec3 reflection = rim * (vec3(.68, .40, .19) * keySide + vec3(.31, .12, .39) * returnSide);
+        vec3 reflection = rim * (vec3(1.15, .72, .38) * keySide + vec3(.62, .29, .76) * returnSide);
         reflection += vec3(.72, .60, .48) * keySide * .22
           + vec3(.14, .06, .23) * returnSide * .18;
-        color = color * mix(1., transmission, spherical) + reflection * spherical;
+        // Fine coating variation and narrow highlights remain attached to the
+        // glass even once the transmitted photograph has become rectilinear.
+        float coating = sin(p.x * 17. + p.y * 11.) * sin(p.y * 23. - p.x * 9.);
+        float polish = exp(-pow((p.y + .63 * p.x - .29) * 90., 2.))
+          * exp(-pow((p.x + .59) * 6., 2.));
+        float pinpoint = exp(-dot(p - vec2(-.66, .57), p - vec2(-.66, .57)) * 1200.);
+        float returnPin = exp(-dot(p - vec2(.81, -.28), p - vec2(.81, -.28)) * 1600.);
+        reflection += vec3(.65, .69, .76) * polish + vec3(1.8, 1.65, 1.4) * pinpoint
+          + vec3(1.1, .64, 1.4) * returnPin + coating * .0015;
+        color = color * mix(1., transmission, glassPresence) + reflection * glassPresence;
         // The photograph disappears into the dark glass shoulder instead of
         // leaving a hard circular decal edge over the original optical layer.
-        float glassEdge = mix(1., 1. - smoothstep(.89, 1., radius), spherical);
+        float glassEdge = mix(1., 1. - smoothstep(.93, 1., radius), glassPresence);
         gl_FragColor = vec4(color, uReveal * glassEdge);
         #include <colorspace_fragment>
       }`,
