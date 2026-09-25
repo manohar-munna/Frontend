@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import { createSkateOptics } from "./skate-optics";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
 type FinishName = "Burgundy" | "Pearl" | "Graphite" | "Sage" | "Midnight";
@@ -471,7 +472,8 @@ type ModelState = {
   cameraMetal: THREE.MeshPhysicalMaterial;
   detailMaterials: THREE.Material[];
   opticalGlass: THREE.MeshBasicMaterial;
-  opticalTexture: THREE.Texture;
+  skate: ReturnType<typeof createSkateOptics>;
+  scenePhotos: THREE.Texture[];
   sensorTexture: THREE.Texture;
   flashGlass: THREE.ShaderMaterial;
   grain: THREE.Texture;
@@ -489,7 +491,7 @@ type ModelState = {
   select: (name: FinishName) => void;
 };
 
-function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutterPhase: number, compact: boolean) {
+function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutterPhase: number, compact: boolean, apertureOpen = 0, scenePeek = 0, lensTravel = 0) {
   // Turning the rear toward the left reveals the phone's left rail and makes
   // the outward-facing optical axis project to the right of the chassis.
   state.phone.rotation.y = THREE.MathUtils.degToRad(-34 * (1 - turn) + 27 * lensPhase * (1 - shutterPhase));
@@ -502,24 +504,56 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
   const cameraX = THREE.MathUtils.lerp(0, targetX, close);
   const verticalFrame = THREE.MathUtils.smoothstep(shutterPhase, 0, 0.8);
   const cameraY = THREE.MathUtils.lerp(0, targetY, verticalFrame);
-  state.camera.position.set(cameraX, cameraY, THREE.MathUtils.lerp(2600, compact ? 1430 : 1320, close));
+  state.camera.position.set(cameraX, cameraY, THREE.MathUtils.lerp(THREE.MathUtils.lerp(2600, compact ? 1430 : 1320, close), 115, lensTravel));
+  state.camera.near = 0.5;
+  state.camera.setViewOffset(3600, 1310, 180, -1310, 3600, 3930);
   state.camera.lookAt(cameraX, cameraY, 0);
   state.camera.zoom = THREE.MathUtils.lerp(1, compact ? 2.35 : 3.8, close);
   state.camera.updateProjectionMatrix();
+  const canvasRect = state.renderer.domElement.getBoundingClientRect();
+  const panel = state.renderer.domElement.closest(".color-panel") as HTMLElement | null;
+  if (panel) {
+    const bounds = panel.getBoundingClientRect();
+    const width = panel.clientWidth;
+    const height = panel.clientHeight;
+    const canvasX = canvasRect.left - bounds.left - panel.clientLeft;
+    const canvasY = canvasRect.top - bounds.top - panel.clientTop;
+    if (lensTravel > 0) {
+      const projected = focus.clone().project(state.camera);
+      const x = canvasX + (projected.x + 1) * canvasRect.width / 2;
+      const y = canvasY + (1 - projected.y) * canvasRect.height / 2;
+      const targetX = THREE.MathUtils.lerp((compact ? 0.37 : 0.225) * width, width / 2, lensTravel);
+      const targetY = THREE.MathUtils.lerp((compact ? 0.53 : 0.445) * height, height / 2, lensTravel);
+      state.camera.setViewOffset(3600, 1310, 180 + (x - targetX) / canvasRect.width * 3600, -1310 + (y - targetY) / canvasRect.height * 3930, 3600, 3930);
+      state.camera.updateProjectionMatrix();
+    }
+    const projected = focus.clone().project(state.camera);
+    const x = canvasX + (projected.x + 1) * canvasRect.width / 2;
+    const y = canvasY + (1 - projected.y) * canvasRect.height / 2;
+    state.skate.paint(width, height, window.innerWidth);
+    const photoHeight = THREE.MathUtils.lerp(width * (compact ? 0.27 : 0.155), height, lensTravel);
+    const photoWidth = photoHeight * width / height;
+    const uniforms = state.skate.material.uniforms;
+    uniforms.uCanvasRect.value.set(canvasX, canvasY, canvasRect.width, canvasRect.height);
+    uniforms.uPhotoRect.value.set(x - photoWidth / 2, y - photoHeight / 2, photoWidth, photoHeight);
+    uniforms.uPanelSize.value.set(width, height);
+    uniforms.uReveal.value = scenePeek;
+    uniforms.uTravel.value = lensTravel;
+  }
   const detailReveal = THREE.MathUtils.smoothstep(shutterPhase, 0.08, 0.56);
   for (const material of state.detailMaterials) {
     if (material instanceof THREE.MeshPhysicalMaterial || material instanceof THREE.MeshBasicMaterial) material.opacity = detailReveal;
   }
-  // Let the photographic lenses carry the phone move; reveal the deeper
-  // optical stack only once the camera zoom has begun.
+  // Preserve the simple dark housing and central optic as the camera moves
+  // from the photographic phone surface into the modeled aperture.
   state.opticalGlass.opacity = THREE.MathUtils.smoothstep(shutterPhase, 0.3, 0.82);
   state.flashGlass.uniforms.uReveal.value = detailReveal;
   const closure = THREE.MathUtils.smoothstep(shutterPhase, 0.43, 0.76);
   const reopening = THREE.MathUtils.smoothstep(shutterPhase, 0.76, 1);
   state.irisAssembly.visible = closure > 0.001;
   state.irisAssembly.rotation.z = 0.2 * (closure - reopening);
-  const motion = closure + reopening;
-  const radius = THREE.MathUtils.lerp(THREE.MathUtils.lerp(IRIS_OUTER_RADIUS, 4.2, closure), 19.6, reopening);
+  const motion = closure + reopening + apertureOpen;
+  const radius = THREE.MathUtils.lerp(THREE.MathUtils.lerp(THREE.MathUtils.lerp(IRIS_OUTER_RADIUS, 4.2, closure), 19.6, reopening), IRIS_OUTER_RADIUS + 7, apertureOpen);
   if (Math.abs(state.irisMotion - motion) > 0.0001) {
     const travel = radius - 4.2;
     for (let index = 0; index < state.irisBlades.length; index++) {
@@ -538,10 +572,10 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
   state.render();
 }
 
-export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compact, onReady }: { color: string; turn: number; lensPhase: number; shutterPhase: number; compact: boolean; onReady?: (ready: boolean) => void }) {
+export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compact, apertureOpen = 0, scenePeek = 0, lensTravel = 0, onReady }: { color: string; turn: number; lensPhase: number; shutterPhase: number; compact: boolean; apertureOpen?: number; scenePeek?: number; lensTravel?: number; onReady?: (ready: boolean) => void }) {
   const mountRef = useRef<HTMLDivElement>(null);
-  const latest = useRef({ color, turn, lensPhase, shutterPhase, compact });
-  latest.current = { color, turn, lensPhase, shutterPhase, compact };
+  const latest = useRef({ color, turn, lensPhase, shutterPhase, compact, apertureOpen, scenePeek, lensTravel });
+  latest.current = { color, turn, lensPhase, shutterPhase, compact, apertureOpen, scenePeek, lensTravel };
   const stateRef = useRef<ModelState | null>(null);
 
   useEffect(() => {
@@ -571,7 +605,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
     let renderFrame = 0;
     let state: ModelState | null = null;
     const loader = new THREE.TextureLoader();
-    const sources = [...names.map((name) => finishes[name].rear), "/assets/iphone-side-burgundy-v3.png", "/assets/iphone-front-burgundy-v3.png", "/assets/optical-glass-v1.webp", "/assets/sensor-glass.webp", "/assets/iris-blade-cutout-v5.webp"];
+    const sources = [...names.map((name) => finishes[name].rear), "/assets/iphone-side-burgundy-v3.png", "/assets/iphone-front-burgundy-v3.png", "/assets/sensor-glass.webp", "/assets/iris-blade-cutout-v5.webp", "/assets/skate-city-v1.png", "/assets/skate-rider-v1.png", "/assets/skate-board-v1.png"];
 
     async function start() {
       const loaded = await Promise.all(sources.map((src) => loader.loadAsync(src)));
@@ -654,10 +688,13 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       add(new THREE.ShapeGeometry(roundedShape(276, 286, 50), 32), deckFinish, deckX, deckY, D / 2 + 16.85);
       const barrelBlack = detail(0x080a0d, 0.44, 0.24);
       const polishedEdge = detail(new THREE.Color(finishes[initial].frame).lerp(new THREE.Color(0x111316), 0.52), 0.78, 0.24);
-      const bladeTexture = loaded[9];
-      const opticalTexture = loaded[7];
-      const sensorTexture = loaded[8];
-      const opticalGlass = makeOpticalGlass(opticalTexture);
+      const bladeTexture = loaded[8];
+      const sensorTexture = loaded[7];
+      const opticalGlass = makeOpticalGlass(sensorTexture);
+      const scenePhotos = loaded.slice(9);
+      const skate = createSkateOptics(scenePhotos.map((texture) => texture.image as HTMLImageElement), scenePhotos[0]);
+      const sceneInLens = add(new THREE.CircleGeometry(42.1, 256), skate.material, -170, 465, D / 2 + 38.1);
+      sceneInLens.renderOrder = 4;
       const lenses = [
         [-170, 465],
         [-40, 396],
@@ -683,7 +720,11 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
         add(new THREE.CircleGeometry(55, 256), barrelBlack, x, y, D / 2 + 35.6);
         add(new THREE.TorusGeometry(55.5, 2.5, 24, 256), polishedEdge, x, y, D / 2 + 36.4);
         if (index === 0) {
-          add(new THREE.CircleGeometry(50.5, 256), opticalGlass, x, y, D / 2 + 37.4);
+          // Keep the same restrained glass/sensor treatment at every scale.
+          // The iris sits in front of this recessed optic, not a ring texture.
+          add(new THREE.CircleGeometry(44, 256), innerHousing, x, y, D / 2 + 36.7);
+          const optic = add(opticGeometry, opticalGlass, x, y, D / 2 + 37.4);
+          optic.scale.z = 0.04;
         } else {
           // Each secondary lens is an actual recessed assembly. The wide
           // retaining flange, sloped black well, and convex optical element
@@ -785,7 +826,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       ];
       // Recessed glass, interleaved leaves, and forward retaining ring occupy
       // separate depth planes, so the macro zoom keeps a visible well.
-      add(new THREE.TorusGeometry(53, 3.2, 24, 192), shutterRings[0], -170, 465, D / 2 + 44);
+      add(new THREE.TorusGeometry(52.5, 0.65, 16, 256), shutterRings[0], -170, 465, D / 2 + 44);
       add(new THREE.TorusGeometry(46, 0.75, 12, 192), shutterRings[1], -170, 465, D / 2 + 42.8);
 
       const frontGlass = add(faceUvs(new THREE.ShapeGeometry(roundedShape(W - 10, H - 10, R - 7), 24)), frontPhoto, 0, 0, -D / 2 - 2);
@@ -813,7 +854,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
         });
       };
       state = {
-        renderer, scene, environment, camera, phone, frame, cameraMetal, detailMaterials, opticalGlass, opticalTexture, sensorTexture, flashGlass, grain, bladeTexture, irisAssembly, irisBlades, irisMotion: -1, shutterRings, photos, materials, current: initial, animation: 0, disposed: false, render,
+        renderer, scene, environment, camera, phone, frame, cameraMetal, detailMaterials, opticalGlass, skate, scenePhotos, sensorTexture, flashGlass, grain, bladeTexture, irisAssembly, irisBlades, irisMotion: -1, shutterRings, photos, materials, current: initial, animation: 0, disposed: false, render,
         select(name) {
           if (name === this.current) return;
           if (this.animation) cancelAnimationFrame(this.animation);
@@ -854,8 +895,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       stateRef.current = state;
       const resize = () => {
         renderer.setSize(container.clientWidth, container.clientHeight, false);
-        camera.setViewOffset(3600, 1310, 180, 0, 3600, 1310);
-        render();
+        if (state) setPhonePose(state, latest.current.turn, latest.current.lensPhase, latest.current.shutterPhase, latest.current.compact, latest.current.apertureOpen, latest.current.scenePeek, latest.current.lensTravel);
       };
       resize();
       const resizeObserver = new ResizeObserver(resize);
@@ -863,7 +903,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       container.dataset.ready = "true";
       onReady?.(true);
       if (latest.current.color !== initial) state.select(latest.current.color as FinishName);
-      setPhonePose(state, latest.current.turn, latest.current.lensPhase, latest.current.shutterPhase, latest.current.compact);
+      setPhonePose(state, latest.current.turn, latest.current.lensPhase, latest.current.shutterPhase, latest.current.compact, latest.current.apertureOpen, latest.current.scenePeek, latest.current.lensTravel);
       state.scene.userData.resizeObserver = resizeObserver;
     }
     start().catch((error) => {
@@ -886,7 +926,9 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
         state.cameraMetal.dispose();
         for (const material of state.detailMaterials) material.dispose();
         state.opticalGlass.dispose();
-        state.opticalTexture.dispose();
+        state.skate.material.dispose();
+        state.skate.texture.dispose();
+        state.scenePhotos.forEach((texture) => texture.dispose());
         state.sensorTexture.dispose();
         state.grain.dispose();
         state.bladeTexture.dispose();
@@ -915,8 +957,8 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
   useEffect(() => {
     const state = stateRef.current;
     if (!state) return;
-    setPhonePose(state, turn, lensPhase, shutterPhase, compact);
-  }, [turn, lensPhase, shutterPhase, compact]);
+    setPhonePose(state, turn, lensPhase, shutterPhase, compact, apertureOpen, scenePeek, lensTravel);
+  }, [turn, lensPhase, shutterPhase, compact, apertureOpen, scenePeek, lensTravel]);
 
   return <div ref={mountRef} className="three-phone" aria-hidden="true" />;
 }

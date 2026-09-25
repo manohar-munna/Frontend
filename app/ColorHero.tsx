@@ -246,12 +246,12 @@ export default function ColorHero() {
   const phaseOne = clamp01(cameraProgress / 0.54);
   const lensPhase = smoothstep(clamp01((cameraProgress - 0.54) / 0.18));
   const shutterPhase = smoothstep(clamp01((cameraProgress - 0.75) / 0.23));
-  const scenePeek = smoothstep(clamp01((scrollProgress - 0.57) / 0.045));
+  const scenePeek = smoothstep(clamp01((scrollProgress - 0.59) / 0.035));
+  const apertureOpen = smoothstep(clamp01((scrollProgress - 0.59) / 0.065));
   const lensTravel = smoothstep(clamp01((scrollProgress - 0.65) / 0.145));
-  const depthReveal = smoothstep(clamp01((scrollProgress - 0.77) / 0.095));
+  const depthReveal = smoothstep(clamp01((scrollProgress - 0.80) / 0.065));
   const phoneSettle = smoothstep(clamp01((scrollProgress - 0.86) / 0.12));
-  const cameraCopyFade = 1 - smoothstep(clamp01(lensTravel / 0.22));
-  const cameraVignette = smoothstep(clamp01((shutterPhase - 0.04) / 0.5));
+  const cameraCopyFade = 1 - smoothstep(clamp01((scrollProgress - 0.615) / 0.035));
   const lensReveal = smoothstep(clamp01((lensPhase - 0.05) / 0.28));
   const reveal = smoothstep(clamp01((phaseOne - 0.06) / 0.34));
   const motion = smoothstep(clamp01((phaseOne - 0.13) / 0.74));
@@ -259,20 +259,6 @@ export default function ColorHero() {
   const companionExit = smoothstep(clamp01((phaseOne - 0.045) / 0.26));
   const railOpacity = 1 - smoothstep(clamp01((phaseOne - 0.01) / 0.1));
   const mobile = panelSize.width < 670;
-  const lensX = mobile ? 0.37 : 0.225;
-  const lensY = mobile ? 0.53 : 0.445;
-  const lensRadius = panelSize.width * (mobile ? 0.105 : 0.061);
-  const portalX = mix(lensX, 0.5, lensTravel);
-  const portalY = mix(lensY, 0.5, lensTravel);
-  const farCorner = Math.max(
-    Math.hypot(panelSize.width / 2, panelSize.height / 2),
-    Math.hypot(lensX * panelSize.width, lensY * panelSize.height),
-    Math.hypot((1 - lensX) * panelSize.width, lensY * panelSize.height),
-    Math.hypot(lensX * panelSize.width, (1 - lensY) * panelSize.height),
-    Math.hypot((1 - lensX) * panelSize.width, (1 - lensY) * panelSize.height),
-  ) + 16;
-  const portalRadius = mix(lensRadius, farCorner, lensTravel);
-  const portalFull = lensTravel > 0.999;
   const phoneWidth = Math.min(panelSize.width * (mobile ? 0.72 : 0.28), panelSize.height * (mobile ? 0.41 : 0.43));
   const phoneHeight = Math.min(panelSize.height * (mobile ? 0.76 : 0.83), phoneWidth * 2.1);
   const phoneWidthSettle = smoothstep(clamp01(phoneSettle / 0.78));
@@ -280,7 +266,6 @@ export default function ColorHero() {
   const sceneHeight = mix(panelSize.height, phoneHeight, phoneSettle);
   const sceneLeft = (panelSize.width - sceneWidth) / 2;
   const sceneTop = (panelSize.height - sceneHeight) / 2;
-  const tunnelOpacity = smoothstep(clamp01((lensTravel - 0.02) / 0.22)) * (1 - smoothstep(clamp01((lensTravel - 0.58) / 0.3)));
   const frameOpacity = smoothstep(clamp01((phoneSettle - 0.45) / 0.45));
   // The 3D rear remains the same object from the opening pose through the turn.
   const assetScale = Math.min(productSize.width / 1200, productSize.height / 1310);
@@ -377,7 +362,7 @@ export default function ColorHero() {
           </div>
 
           <div className="hero-rock" aria-hidden="true" style={sceneReady ? { opacity: 1 - reveal } : undefined}><Image src="/assets/moss-rock.png" alt="" fill priority sizes="(max-width: 700px) 100vw, 85vw" /></div>
-          <div ref={productRef} className="color-product" role="img" aria-label={`${theme.name} iPhone 18 Pro concept`} style={sceneReady ? { top: `${topBase}%`, transform: `translate(calc(-50% + ${shift}px), calc(-50% + ${topShift}px)) scale(${productScale})` } : undefined}>
+          <div ref={productRef} className="color-product" role="img" aria-label={`${theme.name} iPhone 18 Pro concept`} style={sceneReady ? { top: `${topBase}%`, opacity: lensTravel < 1 ? 1 : 0, transform: `translate(calc(-50% + ${shift}px), calc(-50% + ${topShift}px)) scale(${productScale})` } : undefined}>
             <div className="product-artboard" style={{ width: artWidth, height: artHeight }}>
               <svg className="phone-surface-masks" width="0" height="0" aria-hidden="true">
                 <defs>
@@ -412,8 +397,8 @@ export default function ColorHero() {
                   </div>
                 </div>
               ))}
-              <div className="three-phone-layer" style={{ opacity: modelReady ? 1 : 0, width: "300%", left: "-100%", maskImage: cameraVignette > 0 ? `linear-gradient(to bottom, transparent, #000 ${9 * cameraVignette}%, #000 ${100 - 16 * cameraVignette}%, transparent)` : undefined }}>
-                <ThreePhone color={theme.name} turn={turn} lensPhase={lensPhase} shutterPhase={shutterPhase} compact={mobile} onReady={handleModelReady} />
+              <div className="three-phone-layer" style={{ opacity: modelReady ? 1 : 0, width: "300%", height: "300%", left: "-100%", top: "-100%" }}>
+                <ThreePhone color={theme.name} turn={turn} lensPhase={lensPhase} shutterPhase={shutterPhase} apertureOpen={apertureOpen} scenePeek={scenePeek} lensTravel={lensTravel} compact={mobile} onReady={handleModelReady} />
               </div>
             </div>
           </div>
@@ -433,27 +418,27 @@ export default function ColorHero() {
               <span>{theme.name.toUpperCase()}</span><span>18 / PRO</span>
             </div>
           </div>
-          <div className="camera-info-screen" style={{ opacity: smoothstep(clamp01((shutterPhase - 0.08) / 0.27)) * cameraCopyFade }} />
+          <div className="camera-info-screen" style={{ opacity: smoothstep(clamp01((shutterPhase - 0.08) / 0.27)) * (1 - smoothstep(clamp01((scrollProgress - 0.65) / 0.025))) }} />
           <div className="shutter-copy" style={{ opacity: smoothstep(clamp01((shutterPhase - 0.4) / 0.45)) * cameraCopyFade, transform: `translateY(${Number(((1 - shutterPhase) * 26).toFixed(2))}px)` }}>
             <p className="shutter-kicker">02 / THE CAMERA</p>
-            <h2>Light, under<br /><em>control.</em></h2>
+            <h2>Light, under <br /><em>control.</em></h2>
             <p className="shutter-description">The 48MP Fusion Main camera brings the scene into focus. Watch its six-blade aperture open to meet the light.</p>
             <div className="shutter-specs"><span><strong>48MP</strong>Fusion Main</span><span><strong>ƒ/1.48–ƒ/4</strong>Variable aperture</span></div>
           </div>
-          <div className="skate-end-backdrop" style={{ opacity: smoothstep(clamp01(lensTravel / 0.17)) }} />
-          <div className="skate-portal" style={{ left: portalFull ? sceneLeft : portalX * panelSize.width - portalRadius, top: portalFull ? sceneTop : portalY * panelSize.height - portalRadius, width: portalFull ? sceneWidth : portalRadius * 2, height: portalFull ? sceneHeight : portalRadius * 2, borderRadius: portalFull ? `${phoneSettle * 32}px` : "50%", opacity: scenePeek, pointerEvents: depthReveal > 0.95 ? "auto" : "none" }} aria-hidden={scenePeek < 0.01}>
-            <div className="skate-canvas" style={{ width: portalFull ? sceneWidth : panelSize.width, height: portalFull ? sceneHeight : panelSize.height, left: portalFull ? 0 : portalRadius - portalX * panelSize.width, top: portalFull ? 0 : portalRadius - portalY * panelSize.height }}>
-            <div className="skate-background" style={{ transform: `scale(${mix(0.74, 1, lensTravel)})`, transformOrigin: `${lensX * 100}% ${lensY * 100}%` }}>
-              <Image src="/assets/skate-city-v1.png" alt="" fill sizes="100vw" style={{ objectFit: "cover", objectPosition: "center center" }} />
+          <div className="skate-end-backdrop" style={{ opacity: lensTravel >= 1 ? 1 : 0 }} />
+          <div className="skate-portal" style={{ left: sceneLeft, top: sceneTop, width: sceneWidth, height: sceneHeight, borderRadius: `${phoneSettle * 32}px`, opacity: lensTravel >= 1 ? 1 : 0, pointerEvents: depthReveal > 0.95 ? "auto" : "none" }} aria-hidden={lensTravel < 1}>
+            <div className="skate-canvas" style={{ width: sceneWidth, height: sceneHeight, left: 0, top: 0 }}>
+            <div className="skate-background">
+              <Image src="/assets/skate-city-v1.png" alt="" fill unoptimized sizes="100vw" style={{ objectFit: "cover", objectPosition: "center center" }} />
             </div>
             <button
               ref={skaterRef}
               type="button"
               className={`skate-subject ${depthReveal > 0.95 ? "is-interactive" : ""}`}
               style={{
-                left: `${mix(mix(lensX * 100, mobile ? 50 : 54, lensTravel), 50, phoneWidthSettle)}%`,
-                top: `${mix(mix(mobile ? 48 : 36, mobile ? 20 : 1, lensTravel), mobile ? 13 : 15, phoneSettle)}%`,
-                transform: `translateX(-50%) scale(${mix(mix(0.16, mobile ? 1 : 0.84, lensTravel), mobile ? 0.48 : 0.34, phoneWidthSettle)})`,
+                left: `${mix(mobile ? 50 : 54, 50, phoneWidthSettle)}%`,
+                top: `${mix(mobile ? 20 : 1, mobile ? 13 : 15, phoneSettle)}%`,
+                transform: `translateX(-50%) scale(${mix(mobile ? 0.9 : 0.68, mobile ? 0.48 : 0.34, phoneWidthSettle)})`,
                 opacity: scenePeek,
               } as CSSProperties}
               aria-label="Move the skateboarder in the photo"
@@ -487,15 +472,10 @@ export default function ColorHero() {
                 for (const key of ["--rider-angle", "--rider-tilt-y", "--rider-tilt-x", "--board-angle", "--board-tilt-x"]) element.style.setProperty(key, "0deg");
               }}
             >
-              <div className="skate-board-layer" style={{ marginTop: `${-depthReveal * 11}px` }}><Image src="/assets/skate-board-v1.png" alt="" width={1536} height={1024} sizes="(max-width: 700px) 75vw, 34vw" /></div>
-              <div className="skate-rider-layer" style={{ marginTop: `${-depthReveal * 18}px` }}><Image src="/assets/skate-rider-v1.png" alt="" width={1024} height={1536} sizes="(max-width: 700px) 90vw, 50vw" /></div>
+              <div className="skate-board-layer" style={{ marginTop: `${-depthReveal * 11}px` }}><Image src="/assets/skate-board-v1.png" alt="" unoptimized width={1536} height={1024} sizes="(max-width: 700px) 75vw, 34vw" /></div>
+              <div className="skate-rider-layer" style={{ marginTop: `${-depthReveal * 18}px` }}><Image src="/assets/skate-rider-v1.png" alt="" unoptimized width={1024} height={1536} sizes="(max-width: 700px) 90vw, 50vw" /></div>
             </button>
             </div>
-          </div>
-          <div className="lens-tunnel" style={{ left: portalX * panelSize.width, top: portalY * panelSize.height, opacity: tunnelOpacity, "--lens-radius": `${portalRadius}px` } as CSSProperties} aria-hidden="true">
-            <span className="lens-tunnel-ring lens-tunnel-inner" />
-            <span className="lens-tunnel-ring lens-tunnel-middle" />
-            <span className="lens-tunnel-ring lens-tunnel-outer" />
           </div>
           <div className="skate-phone-frame" style={{ left: sceneLeft - 8, top: sceneTop - 8, width: sceneWidth + 16, height: sceneHeight + 16, borderRadius: `${Math.max(24, phoneSettle * 42)}px`, opacity: frameOpacity }} aria-hidden="true">
             <span className="skate-phone-island" style={{ opacity: smoothstep(clamp01((phoneSettle - 0.82) / 0.13)) }} />
