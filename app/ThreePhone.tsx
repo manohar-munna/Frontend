@@ -624,6 +624,7 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
 
 export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compact, apertureOpen = 0, scenePeek = 0, lensTravel = 0, sceneExpansion = 0, layoutReady, onReady }: { color: string; turn: number; lensPhase: number; shutterPhase: number; compact: boolean; apertureOpen?: number; scenePeek?: number; lensTravel?: number; sceneExpansion?: number; layoutReady: boolean; onReady?: (ready: boolean) => void }) {
   const mountRef = useRef<HTMLDivElement>(null);
+  const layoutReadyRef = useRef(false);
   const latest = useRef({ color, turn, lensPhase, shutterPhase, compact, apertureOpen, scenePeek, lensTravel, sceneExpansion });
   latest.current = { color, turn, lensPhase, shutterPhase, compact, apertureOpen, scenePeek, lensTravel, sceneExpansion };
   const stateRef = useRef<ModelState | null>(null);
@@ -979,10 +980,11 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       resize();
       const resizeObserver = new ResizeObserver(resize);
       resizeObserver.observe(container);
-      container.dataset.ready = "true";
-      onReady?.(true);
       if (latest.current.color !== initial) state.select(latest.current.color as FinishName);
       setPhonePose(state, latest.current.turn, latest.current.lensPhase, latest.current.shutterPhase, latest.current.compact, latest.current.apertureOpen, latest.current.scenePeek, latest.current.lensTravel, latest.current.sceneExpansion);
+      state.render(true);
+      container.dataset.ready = "true";
+      onReady?.(true);
       state.scene.userData.resizeObserver = resizeObserver;
     }
     start().catch((error) => {
@@ -1037,6 +1039,8 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
     const state = stateRef.current;
     if (!state) return;
     setPhonePose(state, turn, lensPhase, shutterPhase, compact, apertureOpen, scenePeek, lensTravel, sceneExpansion);
+    if (layoutReady && !layoutReadyRef.current) state.render(true);
+    layoutReadyRef.current = layoutReady;
   }, [turn, lensPhase, shutterPhase, compact, apertureOpen, scenePeek, lensTravel, sceneExpansion, layoutReady]);
 
   return <div ref={mountRef} className="three-phone" aria-hidden="true" />;

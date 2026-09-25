@@ -14,7 +14,7 @@ const colors = [
 
 const COUNT = colors.length;
 const START = COUNT * 4;
-const WHEEL_DURATION = 3200;
+const WHEEL_DURATION = 2800;
 const ENTRANCE_TRAVEL = 2;
 
 const mix = (from: number, to: number, progress: number) => from + (to - from) * progress;
@@ -270,6 +270,8 @@ export default function ColorHero() {
   const sceneTop = (panelSize.height - sceneHeight) / 2;
   const frameOpacity = smoothstep(clamp01((phoneSettle - 0.72) / 0.28));
   const showModel = modelReady && entranceDone;
+  const modelBlend = showModel ? smoothstep(clamp01(scrollProgress / 0.012)) : 0;
+  const photoOpacity = showModel ? 1 - smoothstep(clamp01((scrollProgress - 0.012) / 0.008)) : 1;
   // The 3D rear remains the same object from the opening pose through the turn.
   const assetScale = Math.min(productSize.width / 1200, productSize.height / 1310);
   const artWidth = 1200 * assetScale;
@@ -386,7 +388,7 @@ export default function ColorHero() {
                   opacity: 1 - companionExit,
                   transform: `translate3d(${-artWidth * 0.3 * companionExit}px, ${artHeight * 0.015 * companionExit}px, 0)`,
                 } : {
-                  opacity: showModel ? 0 : 1,
+                  opacity: photoOpacity,
                 }}>
                   <div className="product-layer-source">
                     {colors.map((color, index) => ({ color, index })).filter(({ index }) => part === "companion" || !showModel || index === active || index === outgoing).map(({ color, index }) => (
@@ -404,7 +406,7 @@ export default function ColorHero() {
                   </div>
                 </div>
               ))}
-              <div className="three-phone-layer" style={{ opacity: showModel ? 1 : 0, width: "500%", height: "300%", left: "-200%", top: "-100%" }}>
+              <div className="three-phone-layer" style={{ opacity: modelBlend, width: "500%", height: "300%", left: "-200%", top: "-100%" }}>
                 <ThreePhone color={theme.name} turn={turn} lensPhase={lensPhase} shutterPhase={shutterPhase} apertureOpen={apertureOpen} scenePeek={scenePeek} lensTravel={lensTravel} sceneExpansion={sceneExpansion} compact={mobile} layoutReady={entranceDone} onReady={handleModelReady} />
               </div>
             </div>
