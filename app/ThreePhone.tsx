@@ -6,14 +6,16 @@ import { createSkateOptics } from "./skate-optics";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
 type FinishName = "Burgundy" | "Pearl" | "Graphite" | "Sage" | "Midnight";
-type Finish = { rear: string; bounds: [number, number, number, number]; frame: string; camera: string };
+const CAMERA_SHIFT_X = 22;
+const CAMERA_SHIFT_Y = -14;
+type Finish = { rear: string; bounds: [number, number, number, number]; frame: string; camera: string; rearGrade: [number, number, number]; sideGrade: [number, number, number]; deckGrade: [number, number, number]; rearPivot: [number, number, number]; rearContrast: number; topGain: [number, number, number] };
 
 const finishes: Record<FinishName, Finish> = {
-  Burgundy: { rear: "/assets/iphone-rear-burgundy-v2.png", bounds: [207, 129, 816, 1404], frame: "#783245", camera: "#6d293b" },
-  Pearl: { rear: "/assets/iphone-rear-pearl-v2.png", bounds: [204, 94, 824, 1430], frame: "#c8beb6", camera: "#d6ccc5" },
-  Graphite: { rear: "/assets/iphone-rear-graphite-v2.png", bounds: [207, 129, 816, 1404], frame: "#50504f", camera: "#464746" },
-  Sage: { rear: "/assets/iphone-rear-sage-v2.png", bounds: [207, 127, 818, 1406], frame: "#748677", camera: "#67796c" },
-  Midnight: { rear: "/assets/iphone-rear-midnight-v2.png", bounds: [206, 128, 817, 1405], frame: "#304969", camera: "#283f60" },
+  Burgundy: { rear: "/assets/iphone-rear-burgundy-v2.png", bounds: [207, 129, 816, 1404], frame: "#783245", camera: "#6d293b", rearGrade: [0.90, 0.89, 0.87], sideGrade: [0.73, 0.57, 0.62], deckGrade: [0.92, 1.09, 1], rearPivot: [74, 31, 39], rearContrast: 1.15, topGain: [1.10, 1.08, 1.08] },
+  Pearl: { rear: "/assets/iphone-rear-pearl-v2.png", bounds: [204, 94, 824, 1430], frame: "#c8beb6", camera: "#d6ccc5", rearGrade: [0.91, 0.90, 0.90], sideGrade: [1.70, 1.74, 1.74], deckGrade: [1.01, 1.03, 1.02], rearPivot: [193, 188, 183], rearContrast: 1.55, topGain: [1.025, 1.027, 1.026] },
+  Graphite: { rear: "/assets/iphone-rear-graphite-v2.png", bounds: [207, 129, 816, 1404], frame: "#50504f", camera: "#464746", rearGrade: [0.88, 0.88, 0.83], sideGrade: [1.60, 1.55, 1.50], deckGrade: [1.18, 1.13, 1.14], rearPivot: [66, 66, 64], rearContrast: 1.70, topGain: [1.30, 1.29, 1.30] },
+  Sage: { rear: "/assets/iphone-rear-sage-v2.png", bounds: [207, 127, 818, 1406], frame: "#748677", camera: "#67796c", rearGrade: [0.76, 0.77, 0.82], sideGrade: [1.55, 1.46, 1.53], deckGrade: [1.08, 1.04, 1.05], rearPivot: [90, 100, 95], rearContrast: 1.60, topGain: [1.20, 1.22, 1.17] },
+  Midnight: { rear: "/assets/iphone-rear-midnight-v2.png", bounds: [206, 128, 817, 1405], frame: "#304969", camera: "#283f60", rearGrade: [0.89, 1.05, 1.14], sideGrade: [1.64, 1.53, 1.67], deckGrade: [1.08, 0.97, 1.02], rearPivot: [31, 46, 72], rearContrast: 1.12, topGain: [1.18, 1.06, 1.06] },
 };
 
 const names = Object.keys(finishes) as FinishName[];
@@ -97,31 +99,52 @@ const photoFragment = `
   uniform vec4 uBoundsTo;
   uniform vec3 uTintFrom;
   uniform vec3 uTintTo;
+  uniform vec3 uGradeFrom;
+  uniform vec3 uGradeTo;
+  uniform vec3 uPivotFrom;
+  uniform vec3 uPivotTo;
+  uniform float uContrastFrom;
+  uniform float uContrastTo;
+  uniform vec3 uTopGainFrom;
+  uniform vec3 uTopGainTo;
+  uniform vec2 uUvShiftFrom;
+  uniform vec2 uUvShiftTo;
+  uniform float uLogoPreserve;
   uniform float uTinted;
   uniform float uBlend;
   varying vec2 vUv;
   varying float vX;
 
-  vec3 sampleImage(sampler2D image, vec4 bounds, vec3 tint) {
+  vec3 sampleImage(sampler2D image, vec4 bounds, vec3 tint, vec3 grade, vec3 pivot, float contrast, vec3 topGain, vec2 uvShift) {
     vec2 uv = vec2(mix(bounds.x, bounds.z, vUv.x), mix(bounds.y, bounds.w, vUv.y));
+    // Move the printed mark into registration without revealing the source
+    // image's border at the edges of the phone shell.
+    float logoRadius = length((vUv - vec2(0.49, 0.50)) / vec2(0.30, 0.22));
+    uv += uvShift * (1.0 - smoothstep(0.55, 1.0, logoRadius));
     if (uTinted > 0.5 && vX < -120.0) uv.y = mix(bounds.y, bounds.w, 0.53);
     vec3 color = texture2D(image, uv).rgb;
     if (uTinted > 0.5 && length(tint - vec3(1.0)) > 0.001) {
       float lightness = dot(color, vec3(0.2126, 0.7152, 0.0722));
       color = min(vec3(1.0), tint * clamp(lightness * 1.45 + 0.16, 0.1, 1.0));
     }
-    return color;
+    vec3 graded = color * grade;
+    float logoDistance = length((vUv - vec2(0.49, 0.50)) / vec2(0.16, 0.115));
+    float logoPreserve = uLogoPreserve * (1.0 - smoothstep(0.65, 1.1, logoDistance));
+    float localContrast = mix(contrast, 1.0, logoPreserve);
+    vec3 contrasted = max(vec3(0.0), (graded - pivot) * localContrast + pivot);
+    float topWeight = clamp((vUv.y - 0.20) / 0.75, 0.0, 1.0);
+    return contrasted * mix(vec3(1.0), topGain, topWeight);
   }
 
   void main() {
     vec3 color;
     if (uBlend <= 0.001) {
-      color = sampleImage(uFrom, uBoundsFrom, uTintFrom);
+      color = sampleImage(uFrom, uBoundsFrom, uTintFrom, uGradeFrom, uPivotFrom, uContrastFrom, uTopGainFrom, uUvShiftFrom);
     } else if (uBlend >= 0.999) {
-      color = sampleImage(uTo, uBoundsTo, uTintTo);
+      color = sampleImage(uTo, uBoundsTo, uTintTo, uGradeTo, uPivotTo, uContrastTo, uTopGainTo, uUvShiftTo);
     } else {
-      vec3 from = sampleImage(uFrom, uBoundsFrom, uTintFrom);
-      vec3 to = sampleImage(uTo, uBoundsTo, uTintTo);
+      vec3 from = sampleImage(uFrom, uBoundsFrom, uTintFrom, uGradeFrom, uPivotFrom, uContrastFrom, uTopGainFrom, uUvShiftFrom);
+      vec3 to = sampleImage(uTo, uBoundsTo, uTintTo, uGradeTo, uPivotTo, uContrastTo, uTopGainTo, uUvShiftTo);
       color = mix(from, to, uBlend);
     }
     gl_FragColor = vec4(color, 1.0);
@@ -132,7 +155,7 @@ const photoFragment = `
 type Photos = { rear: Record<FinishName, THREE.Texture>; side: THREE.Texture; front: THREE.Texture };
 type PhotoKind = "rear" | "side" | "front";
 
-function makePhoto(kind: PhotoKind, photos: Photos, initial: FinishName) {
+function makePhoto(kind: PhotoKind, photos: Photos, initial: FinishName, deck = false) {
   const image = kind === "rear" ? photos.rear[initial] : kind === "side" ? photos.side : photos.front;
   const bounds = kind === "rear" ? rearBounds(finishes[initial].bounds) : kind === "side" ? sideBounds : frontBounds;
   const tint = new THREE.Color(1, 1, 1);
@@ -146,12 +169,47 @@ function makePhoto(kind: PhotoKind, photos: Photos, initial: FinishName) {
       uBoundsTo: { value: bounds.clone() },
       uTintFrom: { value: tint.clone() },
       uTintTo: { value: tint.clone() },
+      uGradeFrom: { value: finishGrade(initial, kind, deck) },
+      uGradeTo: { value: finishGrade(initial, kind, deck) },
+      uPivotFrom: { value: finishPivot(initial, kind) },
+      uPivotTo: { value: finishPivot(initial, kind) },
+      uContrastFrom: { value: kind === "rear" && !deck ? finishes[initial].rearContrast : 1 },
+      uContrastTo: { value: kind === "rear" && !deck ? finishes[initial].rearContrast : 1 },
+      uTopGainFrom: { value: finishTopGain(initial, kind, deck) },
+      uTopGainTo: { value: finishTopGain(initial, kind, deck) },
+      uUvShiftFrom: { value: finishUvShift(initial, kind, deck) },
+      uUvShiftTo: { value: finishUvShift(initial, kind, deck) },
+      uLogoPreserve: { value: kind === "rear" && !deck ? 1 : 0 },
       uTinted: { value: kind === "rear" ? 0 : 1 },
       uBlend: { value: 1 },
     },
     side: THREE.FrontSide,
     toneMapped: false,
   });
+}
+
+function finishGrade(name: FinishName, kind: PhotoKind, deck = false) {
+  const srgb = kind === "rear" ? finishes[name].rearGrade : kind === "side" ? finishes[name].sideGrade : [1, 1, 1];
+  const deckGrade = deck ? finishes[name].deckGrade : [1, 1, 1];
+  // Texture samples are linear; the calibration measurements are sRGB.
+  return new THREE.Vector3(Math.pow(srgb[0] * deckGrade[0], 2.2), Math.pow(srgb[1] * deckGrade[1], 2.2), Math.pow(srgb[2] * deckGrade[2], 2.2));
+}
+
+function finishPivot(name: FinishName, kind: PhotoKind) {
+  if (kind !== "rear") return new THREE.Vector3();
+  const srgb = finishes[name].rearPivot;
+  return new THREE.Vector3(Math.pow(srgb[0] / 255, 2.2), Math.pow(srgb[1] / 255, 2.2), Math.pow(srgb[2] / 255, 2.2));
+}
+
+function finishUvShift(name: FinishName, kind: PhotoKind, deck: boolean) {
+  if (kind !== "rear" || deck) return new THREE.Vector2();
+  return new THREE.Vector2(-0.006, name === "Pearl" ? 0.027 : 0.0135);
+}
+
+function finishTopGain(name: FinishName, kind: PhotoKind, deck: boolean) {
+  if (kind !== "rear" || deck) return new THREE.Vector3(1, 1, 1);
+  const gain = finishes[name].topGain;
+  return new THREE.Vector3(Math.pow(gain[0], 2.2), Math.pow(gain[1], 2.2), Math.pow(gain[2], 2.2));
 }
 
 function finishTint(name: FinishName, kind: "side" | "front") {
@@ -507,7 +565,7 @@ type ModelState = {
   irisMotion: number;
   shutterRings: THREE.MeshPhysicalMaterial[];
   photos: Photos;
-  materials: { kind: PhotoKind; material: THREE.ShaderMaterial }[];
+  materials: { kind: PhotoKind; deck: boolean; material: THREE.ShaderMaterial }[];
   current: FinishName;
   animation: number;
   disposed: boolean;
@@ -523,7 +581,7 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
   state.phone.rotation.y = THREE.MathUtils.degToRad(-34 * (1 - turn) + 27 * lensPhase * (1 - shutterPhase));
   state.phone.rotation.z = THREE.MathUtils.degToRad(5 * lensPhase * (1 - shutterPhase));
   state.phone.updateMatrixWorld(true);
-  const focus = new THREE.Vector3(-170, 465, D / 2 + 38.1).applyMatrix4(state.phone.matrixWorld);
+  const focus = new THREE.Vector3(-170 + CAMERA_SHIFT_X, 465 + CAMERA_SHIFT_Y, D / 2 + 38.1).applyMatrix4(state.phone.matrixWorld);
   const close = shutterPhase * shutterPhase * (3 - 2 * shutterPhase);
   const targetX = focus.x + (compact ? -20 : 0);
   const targetY = focus.y - (compact ? 18 : 10);
@@ -715,12 +773,13 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
         return material;
       };
       const materials: ModelState["materials"] = [];
-      const photo = (kind: PhotoKind) => {
-        const material = makePhoto(kind, photos, initial);
-        materials.push({ kind, material });
+      const photo = (kind: PhotoKind, deck = false) => {
+        const material = makePhoto(kind, photos, initial, deck);
+        materials.push({ kind, deck, material });
         return material;
       };
       const rearPhoto = photo("rear");
+      const deckPhoto = photo("rear", true);
       const sidePhoto = photo("side");
       const frontPhoto = photo("front");
       const add = (geometry: THREE.BufferGeometry, material: THREE.Material | THREE.Material[], x = 0, y = 0, z = 0) => {
@@ -736,10 +795,10 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       add(faceUvs(new THREE.ShapeGeometry(roundedShape(W - 3, H - 3, R - 2), 24)), rearPhoto, 0, 0, D / 2 + 1.8);
       // Keep the calibrated rear finish through the entire move. The deck and
       // barrels have matching photo faces, then reveal finer macro detail.
-      const deckX = -100;
-      const deckY = 397;
+      const deckX = -100 + CAMERA_SHIFT_X;
+      const deckY = 397 + CAMERA_SHIFT_Y;
       add(roundedPrism(282, 292, 14, 53, 2), cameraMetal, deckX, deckY, D / 2 + 7);
-      add(faceUvs(new THREE.ShapeGeometry(roundedShape(279, 289, 51), 16), deckX, deckY), rearPhoto, deckX, deckY, D / 2 + 16.5);
+      add(faceUvs(new THREE.ShapeGeometry(roundedShape(279, 289, 51), 16), deckX, deckY), deckPhoto, deckX, deckY, D / 2 + 16.5);
       const deckFinish = detail(finishes[initial].camera, 0.46, 0.3);
       const grain = makeMicroGrain();
       deckFinish.bumpMap = grain;
@@ -753,12 +812,12 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       const opticalGlass = makeOpticalGlass(sensorTexture);
       const scenePhotos = loaded.slice(9);
       const skate = createSkateOptics(scenePhotos.map((texture) => texture.image as HTMLImageElement), scenePhotos[0]);
-      const sceneInLens = add(skate.geometry, skate.material, -170, 465, D / 2 + 36.4);
+      const sceneInLens = add(skate.geometry, skate.material, -170 + CAMERA_SHIFT_X, 465 + CAMERA_SHIFT_Y, D / 2 + 36.4);
       sceneInLens.renderOrder = 4;
       const lenses = [
-        [-170, 465],
-        [-40, 396],
-        [-170, 324],
+        [-170 + CAMERA_SHIFT_X, 465 + CAMERA_SHIFT_Y],
+        [-40 + CAMERA_SHIFT_X, 396 + CAMERA_SHIFT_Y],
+        [-170 + CAMERA_SHIFT_X, 324 + CAMERA_SHIFT_Y],
       ] as const;
       const innerHousing = new THREE.MeshBasicMaterial({ color: 0x030406, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
       const wellWall = new THREE.MeshBasicMaterial({ color: 0x0a0b0e, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
@@ -776,7 +835,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       for (const [index, [x, y]] of lenses.entries()) {
         const barrel = add(new THREE.CylinderGeometry(60, 61, 15, 192), frame, x, y, D / 2 + 25);
         barrel.rotation.x = Math.PI / 2;
-        add(faceUvs(new THREE.CircleGeometry(58.5, 192), x, y), rearPhoto, x, y, D / 2 + 35);
+        add(faceUvs(new THREE.CircleGeometry(58.5, 192), x, y), deckPhoto, x, y, D / 2 + 35);
         add(new THREE.CircleGeometry(55, 256), barrelBlack, x, y, D / 2 + 35.6);
         add(new THREE.TorusGeometry(55.5, 2.5, 24, 256), polishedEdge, x, y, D / 2 + 36.4);
         if (index === 0) {
@@ -798,7 +857,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
         }
       }
 
-      const irisWell = add(new THREE.CylinderGeometry(46.2, 46.2, 3.7, 128, 1, true), barrelBlack, -170, 465, D / 2 + 39.1);
+      const irisWell = add(new THREE.CylinderGeometry(46.2, 46.2, 3.7, 128, 1, true), barrelBlack, -170 + CAMERA_SHIFT_X, 465 + CAMERA_SHIFT_Y, D / 2 + 39.1);
       irisWell.rotation.x = Math.PI / 2;
 
       const flashRing = detail(0xa6a5a4, 0.75, 0.21);
@@ -814,17 +873,17 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       };
       // These positions are measured against the calibrated photograph. The
       // macro details land exactly over its flash and depth sensor.
-      addDeckDetail(new THREE.TorusGeometry(22, 2, 12, 96), flashRing, -35, 491, D / 2 + 22.5);
-      addDeckDetail(new THREE.CircleGeometry(20, 96), flashGlass, -35, 491, D / 2 + 23);
-      addDeckDetail(new THREE.TorusGeometry(22, 1.5, 12, 96), sensorRing, -36, 292, D / 2 + 22.5);
-      addDeckDetail(new THREE.CircleGeometry(20, 96), barrelBlack, -36, 292, D / 2 + 23);
-      addDeckDetail(new THREE.TorusGeometry(4.1, 0.8, 8, 48), microphoneRing, 7, 319, D / 2 + 22.5);
-      addDeckDetail(new THREE.CircleGeometry(3.3, 48), barrelBlack, 7, 319, D / 2 + 23);
+      addDeckDetail(new THREE.TorusGeometry(22, 2, 12, 96), flashRing, -35 + CAMERA_SHIFT_X, 491 + CAMERA_SHIFT_Y, D / 2 + 22.5);
+      addDeckDetail(new THREE.CircleGeometry(20, 96), flashGlass, -35 + CAMERA_SHIFT_X, 491 + CAMERA_SHIFT_Y, D / 2 + 23);
+      addDeckDetail(new THREE.TorusGeometry(22, 1.5, 12, 96), sensorRing, -36 + CAMERA_SHIFT_X, 292 + CAMERA_SHIFT_Y, D / 2 + 22.5);
+      addDeckDetail(new THREE.CircleGeometry(20, 96), barrelBlack, -36 + CAMERA_SHIFT_X, 292 + CAMERA_SHIFT_Y, D / 2 + 23);
+      addDeckDetail(new THREE.TorusGeometry(4.1, 0.8, 8, 48), microphoneRing, 7 + CAMERA_SHIFT_X, 319 + CAMERA_SHIFT_Y, D / 2 + 22.5);
+      addDeckDetail(new THREE.CircleGeometry(3.3, 48), barrelBlack, 7 + CAMERA_SHIFT_X, 319 + CAMERA_SHIFT_Y, D / 2 + 23);
 
       // Six independent cutout leaves reveal the original recessed glass.
       // Each leaf keeps its own photo texture, 3D thickness, edge, and shadow.
       const irisAssembly = new THREE.Group();
-      irisAssembly.position.set(-170, 465, D / 2 + 38.4);
+      irisAssembly.position.set(-170 + CAMERA_SHIFT_X, 465 + CAMERA_SHIFT_Y, D / 2 + 38.4);
       phone.add(irisAssembly);
       const bladePalette = [0xe0e0e2, 0xd8d8db, 0xe4e4e6, 0xdadade, 0xe1e1e4, 0xd6d6da];
       const irisBlades = bladePalette.map((color, index) => {
@@ -908,8 +967,8 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       }
       // Recessed glass, interleaved leaves, and forward retaining ring occupy
       // separate depth planes, so the macro zoom keeps a visible well.
-      add(new THREE.TorusGeometry(52.5, 0.65, 16, 256), shutterRings[0], -170, 465, D / 2 + 44);
-      add(new THREE.TorusGeometry(46, 0.75, 12, 192), shutterRings[1], -170, 465, D / 2 + 42.8);
+      add(new THREE.TorusGeometry(52.5, 0.65, 16, 256), shutterRings[0], -170 + CAMERA_SHIFT_X, 465 + CAMERA_SHIFT_Y, D / 2 + 44);
+      add(new THREE.TorusGeometry(46, 0.75, 12, 192), shutterRings[1], -170 + CAMERA_SHIFT_X, 465 + CAMERA_SHIFT_Y, D / 2 + 42.8);
 
       const frontGlass = add(faceUvs(new THREE.ShapeGeometry(roundedShape(W - 10, H - 10, R - 7), 24)), frontPhoto, 0, 0, -D / 2 - 2);
       frontGlass.rotation.y = Math.PI;
@@ -949,7 +1008,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
           if (this.animation) cancelAnimationFrame(this.animation);
           const from = this.current;
           this.current = name;
-          for (const { kind, material } of this.materials) {
+          for (const { kind, deck, material } of this.materials) {
             const a = material.uniforms;
             a.uFrom.value = kind === "rear" ? photos.rear[from] : kind === "side" ? photos.side : photos.front;
             a.uTo.value = kind === "rear" ? photos.rear[name] : kind === "side" ? photos.side : photos.front;
@@ -957,6 +1016,16 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
             a.uBoundsTo.value = kind === "rear" ? rearBounds(finishes[name].bounds) : kind === "side" ? sideBounds : frontBounds;
             a.uTintFrom.value = kind === "rear" ? new THREE.Color(1, 1, 1) : finishTint(from, kind);
             a.uTintTo.value = kind === "rear" ? new THREE.Color(1, 1, 1) : finishTint(name, kind);
+            a.uGradeFrom.value = finishGrade(from, kind, deck);
+            a.uGradeTo.value = finishGrade(name, kind, deck);
+            a.uPivotFrom.value = finishPivot(from, kind);
+            a.uPivotTo.value = finishPivot(name, kind);
+            a.uContrastFrom.value = kind === "rear" && !deck ? finishes[from].rearContrast : 1;
+            a.uContrastTo.value = kind === "rear" && !deck ? finishes[name].rearContrast : 1;
+            a.uTopGainFrom.value = finishTopGain(from, kind, deck);
+            a.uTopGainTo.value = finishTopGain(name, kind, deck);
+            a.uUvShiftFrom.value = finishUvShift(from, kind, deck);
+            a.uUvShiftTo.value = finishUvShift(name, kind, deck);
             a.uBlend.value = 0;
           }
           const frameFrom = new THREE.Color(finishes[from].frame);

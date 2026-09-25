@@ -418,7 +418,7 @@ export default function ColorHero() {
                   </div>
                 </div>
               ))}
-              <div className="three-phone-layer" style={{ opacity: modelBlend, width: "500%", height: "300%", left: "-200%", top: "-100%", transform: `translate3d(${-artWidth * 0.008 * photoAlignment}px, ${artHeight * 0.018 * photoAlignment}px, 0)` }}>
+              <div className="three-phone-layer" style={{ opacity: modelBlend, width: "500%", height: "300%", left: "-200%", top: "-100%", transform: `translate3d(${-artWidth * 0.008 * photoAlignment}px, ${artHeight * 0.011 * photoAlignment}px, 0)` }}>
                 <ThreePhone color={theme.name} turn={turn} lensPhase={lensPhase} shutterPhase={shutterPhase} apertureOpen={apertureOpen} scenePeek={scenePeek} lensTravel={lensTravel} sceneExpansion={sceneExpansion} compact={mobile} layoutReady={entranceDone} onReady={handleModelReady} />
               </div>
             </div>
