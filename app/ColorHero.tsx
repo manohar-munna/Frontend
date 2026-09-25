@@ -33,6 +33,7 @@ export default function ColorHero() {
   const heroRef = useRef<HTMLElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const productRef = useRef<HTMLDivElement>(null);
+  const skaterRef = useRef<HTMLButtonElement>(null);
   const positionRef = useRef(START);
   const activeRef = useRef(0);
   const rippleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -205,7 +206,10 @@ export default function ColorHero() {
     }, 1330);
   }, []);
 
-  const carouselVisible = scrollProgress <= 0.04 * 0.54;
+  // The original three-screen phone journey keeps its timing. The extra two
+  // screens are reserved for travelling through the lens and into the photo.
+  const cameraProgress = clamp01(scrollProgress * (5 / 3));
+  const carouselVisible = cameraProgress <= 0.04 * 0.54;
   useEffect(() => {
     if (!entranceDone || !autoPlay || !carouselVisible) return;
     const tick = () => {
@@ -239,9 +243,14 @@ export default function ColorHero() {
 
   const theme = colors[active];
   const base = colors[baseIndex];
-  const phaseOne = clamp01(scrollProgress / 0.54);
-  const lensPhase = smoothstep(clamp01((scrollProgress - 0.54) / 0.18));
-  const shutterPhase = smoothstep(clamp01((scrollProgress - 0.75) / 0.23));
+  const phaseOne = clamp01(cameraProgress / 0.54);
+  const lensPhase = smoothstep(clamp01((cameraProgress - 0.54) / 0.18));
+  const shutterPhase = smoothstep(clamp01((cameraProgress - 0.75) / 0.23));
+  const lensWindow = smoothstep(clamp01((scrollProgress - 0.59) / 0.07));
+  const pushThrough = smoothstep(clamp01((scrollProgress - 0.66) / 0.13));
+  const subjectTravel = pushThrough;
+  const depthReveal = smoothstep(clamp01((scrollProgress - 0.77) / 0.11));
+  const cameraCopyFade = 1 - smoothstep(clamp01(pushThrough / 0.48));
   const cameraVignette = smoothstep(clamp01((shutterPhase - 0.04) / 0.5));
   const lensReveal = smoothstep(clamp01((lensPhase - 0.05) / 0.28));
   const reveal = smoothstep(clamp01((phaseOne - 0.06) / 0.34));
@@ -250,6 +259,17 @@ export default function ColorHero() {
   const companionExit = smoothstep(clamp01((phaseOne - 0.045) / 0.26));
   const railOpacity = 1 - smoothstep(clamp01((phaseOne - 0.01) / 0.1));
   const mobile = panelSize.width < 670;
+  const portalX = mobile ? 0.37 : 0.225;
+  const portalY = mobile ? 0.53 : 0.445;
+  const lensRadius = panelSize.width * (mobile ? 0.105 : 0.061);
+  const farCorner = Math.max(
+    Math.hypot(portalX * panelSize.width, portalY * panelSize.height),
+    Math.hypot((1 - portalX) * panelSize.width, portalY * panelSize.height),
+    Math.hypot(portalX * panelSize.width, (1 - portalY) * panelSize.height),
+    Math.hypot((1 - portalX) * panelSize.width, (1 - portalY) * panelSize.height),
+  ) + 16;
+  const portalRadius = lensRadius * lensWindow + (farCorner - lensRadius) * pushThrough;
+  const portalFull = pushThrough > 0.999;
   // The 3D rear remains the same object from the opening pose through the turn.
   const assetScale = Math.min(productSize.width / 1200, productSize.height / 1310);
   const artWidth = 1200 * assetScale;
@@ -399,12 +419,63 @@ export default function ColorHero() {
               <span>{theme.name.toUpperCase()}</span><span>18 / PRO</span>
             </div>
           </div>
-          <div className="camera-info-screen" style={{ opacity: smoothstep(clamp01((shutterPhase - 0.08) / 0.27)) }} />
-          <div className="shutter-copy" style={{ opacity: smoothstep(clamp01((shutterPhase - 0.4) / 0.45)), transform: `translateY(${Number(((1 - shutterPhase) * 26).toFixed(2))}px)` }}>
+          <div className="camera-info-screen" style={{ opacity: smoothstep(clamp01((shutterPhase - 0.08) / 0.27)) * cameraCopyFade }} />
+          <div className="shutter-copy" style={{ opacity: smoothstep(clamp01((shutterPhase - 0.4) / 0.45)) * cameraCopyFade, transform: `translateY(${Number(((1 - shutterPhase) * 26).toFixed(2))}px)` }}>
             <p className="shutter-kicker">02 / THE CAMERA</p>
             <h2>Light, under<br /><em>control.</em></h2>
             <p className="shutter-description">The 48MP Fusion Main camera brings the scene into focus. Watch its six-blade aperture open to meet the light.</p>
             <div className="shutter-specs"><span><strong>48MP</strong>Fusion Main</span><span><strong>ƒ/1.48–ƒ/4</strong>Variable aperture</span></div>
+          </div>
+          <div className="skate-portal" style={portalFull ? { inset: 0, borderRadius: 0, opacity: lensWindow, pointerEvents: depthReveal > 0.95 ? "auto" : "none" } : { left: portalX * panelSize.width - portalRadius, top: portalY * panelSize.height - portalRadius, width: portalRadius * 2, height: portalRadius * 2, borderRadius: "50%", opacity: lensWindow, pointerEvents: "none" }} aria-hidden={lensWindow < 0.01}>
+            <div className="skate-canvas" style={{ width: panelSize.width, height: panelSize.height, left: portalFull ? 0 : portalRadius - portalX * panelSize.width, top: portalFull ? 0 : portalRadius - portalY * panelSize.height }}>
+            <div className="skate-background" style={{ transform: `scale(${mix(0.74, 1, pushThrough)})`, transformOrigin: `${portalX * 100}% ${portalY * 100}%` }}>
+              <Image src="/assets/skate-city-v1.png" alt="" fill sizes="100vw" style={{ objectFit: "cover", objectPosition: "center center" }} />
+            </div>
+            <button
+              ref={skaterRef}
+              type="button"
+              className={`skate-subject ${depthReveal > 0.95 ? "is-interactive" : ""}`}
+              style={{
+                left: `${mix(portalX * 100, mobile ? 50 : 54, subjectTravel)}%`,
+                top: `${mix(mobile ? 48 : 36, mobile ? 20 : 1, subjectTravel)}%`,
+                transform: `translateX(-50%) scale(${mix(0.16, mobile ? 1 : 0.84, subjectTravel)})`,
+                opacity: lensWindow,
+              } as CSSProperties}
+              aria-label="Move the skateboarder in the photo"
+              tabIndex={depthReveal > 0.95 ? 0 : -1}
+              onClick={(event) => {
+                const element = event.currentTarget;
+                element.classList.add("is-tapped");
+                window.setTimeout(() => element.classList.remove("is-tapped"), 850);
+              }}
+              onPointerMove={(event) => {
+                if (depthReveal < 0.95) return;
+                const element = skaterRef.current;
+                if (!element) return;
+                const bounds = element.getBoundingClientRect();
+                const x = clamp01((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+                const y = clamp01((event.clientY - bounds.top) / bounds.height) * 2 - 1;
+                element.style.setProperty("--rider-x", `${(x * 14).toFixed(1)}px`);
+                element.style.setProperty("--rider-y", `${(y * 9).toFixed(1)}px`);
+                element.style.setProperty("--board-x", `${(x * 22).toFixed(1)}px`);
+                element.style.setProperty("--board-y", `${(y * 13).toFixed(1)}px`);
+                element.style.setProperty("--rider-angle", `${(x * 2.8).toFixed(2)}deg`);
+                element.style.setProperty("--rider-tilt-y", `${(x * 5).toFixed(2)}deg`);
+                element.style.setProperty("--rider-tilt-x", `${(y * -4).toFixed(2)}deg`);
+                element.style.setProperty("--board-angle", `${(x * -4.5).toFixed(2)}deg`);
+                element.style.setProperty("--board-tilt-x", `${(y * 7).toFixed(2)}deg`);
+              }}
+              onPointerLeave={() => {
+                const element = skaterRef.current;
+                if (!element) return;
+                for (const key of ["--rider-x", "--rider-y", "--board-x", "--board-y"]) element.style.setProperty(key, "0px");
+                for (const key of ["--rider-angle", "--rider-tilt-y", "--rider-tilt-x", "--board-angle", "--board-tilt-x"]) element.style.setProperty(key, "0deg");
+              }}
+            >
+              <div className="skate-board-layer" style={{ marginTop: `${-depthReveal * 11}px` }}><Image src="/assets/skate-board-v1.png" alt="" width={1536} height={1024} sizes="(max-width: 700px) 75vw, 34vw" /></div>
+              <div className="skate-rider-layer" style={{ marginTop: `${-depthReveal * 18}px` }}><Image src="/assets/skate-rider-v1.png" alt="" width={1024} height={1536} sizes="(max-width: 700px) 90vw, 50vw" /></div>
+            </button>
+            </div>
           </div>
         </div>
         </div>
