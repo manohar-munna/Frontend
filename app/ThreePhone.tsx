@@ -534,36 +534,43 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
   // Keep useful depth precision at every scale. A fixed 0.5 near plane
   // quantized the distant camera deck and lens faces into competing depths.
   state.camera.near = Math.max(0.5, (state.camera.position.z - 80) * 0.45);
-  state.camera.setViewOffset(3600, 1310, -1020, -1310, 6000, 3930);
   state.camera.lookAt(cameraX, cameraY, 0);
   state.camera.zoom = THREE.MathUtils.lerp(1, compact ? 2.35 : 3.8, close);
-  state.camera.updateProjectionMatrix();
-  const canvasRect = state.renderer.domElement.getBoundingClientRect();
-  const panel = state.renderer.domElement.closest(".color-panel") as HTMLElement | null;
+  const canvas = state.renderer.domElement;
+  const mount = canvas.parentElement!;
+  const virtualRect = mount.getBoundingClientRect();
+  const panel = mount.closest(".color-panel") as HTMLElement | null;
   if (panel) {
     const bounds = panel.getBoundingClientRect();
-    // The model's canvas extends well beyond the panel for macro framing.
-    // Rasterize only the part the panel can actually show at full DPR.
-    const clipLeft = Math.max(canvasRect.left, bounds.left);
-    const clipTop = Math.max(canvasRect.top, bounds.top);
-    const clipRight = Math.min(canvasRect.right, bounds.right);
-    const clipBottom = Math.min(canvasRect.bottom, bounds.bottom);
-    const canvas = state.renderer.domElement;
-    const scaleX = canvas.clientWidth / canvasRect.width;
-    const scaleY = canvas.clientHeight / canvasRect.height;
-    state.renderer.setScissorTest(true);
-    state.renderer.setScissor(
-      (clipLeft - canvasRect.left) * scaleX,
-      (canvasRect.bottom - clipBottom) * scaleY,
-      Math.max(0, clipRight - clipLeft) * scaleX,
-      Math.max(0, clipBottom - clipTop) * scaleY,
-    );
     const width = panel.clientWidth;
     const height = panel.clientHeight;
-    const canvasX = canvasRect.left - bounds.left - panel.clientLeft;
-    const canvasY = canvasRect.top - bounds.top - panel.clientTop;
+    const scaleX = virtualRect.width / mount.clientWidth;
+    const scaleY = virtualRect.height / mount.clientHeight;
+    const contentLeft = bounds.left + panel.clientLeft;
+    const contentTop = bounds.top + panel.clientTop;
+    const cropX = (contentLeft - virtualRect.left) / virtualRect.width;
+    const cropY = (contentTop - virtualRect.top) / virtualRect.height;
+    const cropWidth = width / virtualRect.width;
+    const cropHeight = height / virtualRect.height;
+    // The 500%-wide mount defines the virtual projection, but only the panel
+    // is visible. Render that crop into a panel-sized buffer instead of
+    // allocating and clearing the entire off-screen virtual canvas.
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    canvas.style.transform = `translate3d(${(contentLeft - virtualRect.left) / scaleX}px, ${(contentTop - virtualRect.top) / scaleY}px, 0) scale(${1 / scaleX}, ${1 / scaleY})`;
+    const pixelRatio = state.renderer.getPixelRatio();
+    if (canvas.width !== Math.floor(width * pixelRatio) || canvas.height !== Math.floor(height * pixelRatio)) {
+      state.renderer.setSize(width, height, false);
+    }
+    state.renderer.setScissorTest(false);
+    const viewX = -1020 + cropX * 6000;
+    const viewY = -1310 + cropY * 3930;
+    const viewWidth = cropWidth * 6000;
+    const viewHeight = cropHeight * 3930;
+    state.camera.setViewOffset(3600, 1310, viewX, viewY, viewWidth, viewHeight);
+    state.camera.updateProjectionMatrix();
     const coverRadius = Math.hypot(width / 2, height / 2) + 18;
-    const focalPixels = state.camera.projectionMatrix.elements[5] * canvasRect.height / 2;
+    const focalPixels = state.camera.projectionMatrix.elements[5] * height / 2;
     // Stop the physical dive exactly when the small pupil covers the viewport.
     // Continuing toward the surface magnified the skater into a cropped blur.
     const entryZ = focus.z + focalPixels * 16.5 / coverRadius;
@@ -573,16 +580,16 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
     state.camera.updateMatrixWorld(true);
     if (lensTravel > 0) {
       const projected = focus.clone().project(state.camera);
-      const x = canvasX + (projected.x + 1) * canvasRect.width / 2;
-      const y = canvasY + (1 - projected.y) * canvasRect.height / 2;
+      const x = (projected.x + 1) * width / 2;
+      const y = (1 - projected.y) * height / 2;
       const targetX = THREE.MathUtils.lerp((compact ? 0.37 : 0.225) * width, width / 2, lensTravel);
       const targetY = THREE.MathUtils.lerp((compact ? 0.53 : 0.445) * height, height / 2, lensTravel);
-      state.camera.setViewOffset(3600, 1310, -1020 + (x - targetX) / canvasRect.width * 6000, -1310 + (y - targetY) / canvasRect.height * 3930, 6000, 3930);
+      state.camera.setViewOffset(3600, 1310, viewX + (x - targetX) / width * viewWidth, viewY + (y - targetY) / height * viewHeight, viewWidth, viewHeight);
       state.camera.updateProjectionMatrix();
     }
     state.skate.paint(width, height, window.innerWidth);
     const uniforms = state.skate.material.uniforms;
-    uniforms.uCanvasRect.value.set(canvasX, canvasY, canvasRect.width, canvasRect.height);
+    uniforms.uCanvasRect.value.set(0, 0, width, height);
     uniforms.uPanelSize.value.set(width, height);
     uniforms.uReveal.value = scenePeek;
     uniforms.uExpansion.value = sceneExpansion;
@@ -646,7 +653,9 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
     const debugRenderer = gl.getExtension("WEBGL_debug_renderer_info");
     const rendererName = String(gl.getParameter(debugRenderer?.UNMASKED_RENDERER_WEBGL || gl.RENDERER));
     const softwareRenderer = /swiftshader|llvmpipe|software/i.test(rendererName);
-    renderer.setPixelRatio(softwareRenderer ? 1.5 : Math.max(2, Math.min(devicePixelRatio || 1, 2.5)));
+    const integratedRenderer = /intel.*(uhd|iris|hd graphics)/i.test(rendererName);
+    const pixelRatio = softwareRenderer ? 1 : integratedRenderer ? 1.5 : Math.max(2, Math.min(devicePixelRatio || 1, 2.5));
+    renderer.setPixelRatio(pixelRatio);
     renderer.setClearColor(0, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.NoToneMapping;
@@ -973,11 +982,18 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
         },
       };
       stateRef.current = state;
+      // The six opaque leaves use custom physical shaders. Compile them while
+      // loading so the first scroll into the aperture cannot block a frame.
+      irisAssembly.visible = true;
+      await renderer.compileAsync(scene, camera);
+      irisAssembly.visible = false;
+      if (cancelled) return;
       const resize = () => {
-        renderer.setSize(container.clientWidth, container.clientHeight, false);
         if (state) setPhonePose(state, latest.current.turn, latest.current.lensPhase, latest.current.shutterPhase, latest.current.compact, latest.current.apertureOpen, latest.current.scenePeek, latest.current.lensTravel, latest.current.sceneExpansion);
       };
       resize();
+      renderer.initTexture(skate.texture);
+      renderer.initTexture(bladeTexture);
       const resizeObserver = new ResizeObserver(resize);
       resizeObserver.observe(container);
       if (latest.current.color !== initial) state.select(latest.current.color as FinishName);
