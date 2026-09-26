@@ -629,7 +629,7 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
   state.render();
 }
 
-export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compact, apertureOpen = 0, scenePeek = 0, lensTravel = 0, sceneExpansion = 0, layoutReady, onReady }: { color: string; turn: number; lensPhase: number; shutterPhase: number; compact: boolean; apertureOpen?: number; scenePeek?: number; lensTravel?: number; sceneExpansion?: number; layoutReady: boolean; onReady?: (ready: boolean) => void }) {
+export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compact, apertureOpen = 0, scenePeek = 0, lensTravel = 0, sceneExpansion = 0, entranceActive, layoutReady, onReady }: { color: string; turn: number; lensPhase: number; shutterPhase: number; compact: boolean; apertureOpen?: number; scenePeek?: number; lensTravel?: number; sceneExpansion?: number; entranceActive: boolean; layoutReady: boolean; onReady?: (ready: boolean) => void }) {
   const mountRef = useRef<HTMLDivElement>(null);
   const layoutReadyRef = useRef(false);
   const latest = useRef({ color, turn, lensPhase, shutterPhase, compact, apertureOpen, scenePeek, lensTravel, sceneExpansion });
@@ -1050,6 +1050,27 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
     const state = stateRef.current;
     if (state && color in finishes) state.select(color as FinishName);
   }, [color]);
+
+  useEffect(() => {
+    if (!entranceActive) return;
+    // The CSS entrance moves the artboard through the panel. Keep its cropped
+    // projection registered on every frame; stop drawing once the entrance ends.
+    let frame = 0;
+    let previousBounds: DOMRect | undefined;
+    const followEntrance = () => {
+      const state = stateRef.current;
+      const bounds = mountRef.current?.getBoundingClientRect();
+      if (state && bounds && (!previousBounds || bounds.x !== previousBounds.x || bounds.y !== previousBounds.y || bounds.width !== previousBounds.width || bounds.height !== previousBounds.height)) {
+        const pose = latest.current;
+        setPhonePose(state, pose.turn, pose.lensPhase, pose.shutterPhase, pose.compact, pose.apertureOpen, pose.scenePeek, pose.lensTravel, pose.sceneExpansion);
+        state.render(true);
+        previousBounds = bounds;
+      }
+      frame = requestAnimationFrame(followEntrance);
+    };
+    frame = requestAnimationFrame(followEntrance);
+    return () => cancelAnimationFrame(frame);
+  }, [entranceActive]);
 
   useLayoutEffect(() => {
     const state = stateRef.current;

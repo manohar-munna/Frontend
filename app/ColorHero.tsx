@@ -269,15 +269,16 @@ export default function ColorHero() {
   const sceneLeft = (panelSize.width - sceneWidth) / 2;
   const sceneTop = (panelSize.height - sceneHeight) / 2;
   const frameOpacity = smoothstep(clamp01((phoneSettle - 0.72) / 0.28));
-  const showModel = modelReady && entranceDone;
-  const modelBlend = showModel ? smoothstep(clamp01(scrollProgress / 0.012)) : 0;
-  const photoOpacity = showModel ? 1 - smoothstep(clamp01((scrollProgress - 0.012) / 0.008)) : 1;
+  // Keep one model from the opening pose through the turn. Its silhouette,
+  // materials and controls must not change when scrolling begins. Use the
+  // photograph only as a fallback if WebGL is unavailable.
+  const showModel = modelReady;
+  const modelBlend = modelReady ? 1 : 0;
+  const photoOpacity = modelStatus === "unavailable" ? 1 : 0;
   // The 3D rear remains the same object from the opening pose through the turn.
   const assetScale = Math.min(productSize.width / 1200, productSize.height / 1310);
   const artWidth = 1200 * assetScale;
   const artHeight = 1310 * assetScale;
-  // Match the resting 3D rear to the pair photograph, then release the offset before the turn.
-  const photoAlignment = 1 - smoothstep(clamp01((scrollProgress - 0.02) / 0.05));
   const endScale = panelSize.height * (mobile ? 0.37 : 0.66) / (artHeight * (1136 / 1310));
   const baseScale = mix(1, endScale, motion);
   const productScale = baseScale * mix(1, mobile ? 1.43 : 1.17, lensPhase);
@@ -373,7 +374,7 @@ export default function ColorHero() {
           </div>
 
           <div className="hero-rock" aria-hidden="true" style={sceneReady ? { opacity: 1 - reveal } : undefined}><Image src="/assets/moss-rock.png" alt="" fill priority sizes="(max-width: 700px) 100vw, 85vw" /></div>
-          <div ref={productRef} className="color-product" role="img" aria-label={`${theme.name} iPhone 18 Pro concept`} style={sceneReady ? { top: `${topBase}%`, opacity: sceneExpansion < 1 ? 1 : 0, transform: `translate(calc(-50% + ${shift}px), calc(-50% + ${topShift}px)) scale(${productScale})` } : undefined}>
+          <div ref={productRef} className="color-product" role="img" aria-label={`${theme.name} iPhone 18 Pro concept`} style={sceneReady ? { top: `${topBase}%`, opacity: sceneExpansion < 1 && modelStatus !== "loading" ? 1 : 0, transform: `translate(calc(-50% + ${shift}px), calc(-50% + ${topShift}px)) scale(${productScale})` } : undefined}>
             <div className="product-artboard" style={{ width: artWidth, height: artHeight }}>
               <svg className="phone-surface-masks" width="0" height="0" aria-hidden="true">
                 <defs>
@@ -408,8 +409,8 @@ export default function ColorHero() {
                   </div>
                 </div>
               ))}
-              <div className="three-phone-layer" style={{ opacity: modelBlend, width: "500%", height: "300%", left: "-200%", top: "-100%", transform: `translate3d(${-artWidth * 0.008 * photoAlignment}px, ${artHeight * 0.018 * photoAlignment}px, 0)` }}>
-                <ThreePhone color={theme.name} turn={turn} lensPhase={lensPhase} shutterPhase={shutterPhase} apertureOpen={apertureOpen} scenePeek={scenePeek} lensTravel={lensTravel} sceneExpansion={sceneExpansion} compact={mobile} layoutReady={entranceDone} onReady={handleModelReady} />
+              <div className="three-phone-layer" style={{ opacity: modelBlend, width: "500%", height: "300%", left: "-200%", top: "-100%", transform: `translate3d(${-artWidth * 0.008}px, ${artHeight * 0.018}px, 0)` }}>
+                <ThreePhone color={theme.name} turn={turn} lensPhase={lensPhase} shutterPhase={shutterPhase} apertureOpen={apertureOpen} scenePeek={scenePeek} lensTravel={lensTravel} sceneExpansion={sceneExpansion} compact={mobile} entranceActive={sceneReady && !entranceDone} layoutReady={entranceDone} onReady={handleModelReady} />
               </div>
             </div>
           </div>
