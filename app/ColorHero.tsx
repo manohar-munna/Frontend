@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import ThreePhone from "./ThreePhone";
-import { useControlledScroll } from "./useControlledScroll";
 
 const colors = [
   { name: "Burgundy", image: "/assets/iphone-burgundy.png", outer: "#672738", stage: "#2c101c", glow: "#8e3951", ink: "#fff4f1", cameraStage: "#45202e", cameraPanel: "#171118", cameraAccent: "#dca8b9" },
@@ -82,7 +81,41 @@ export default function ColorHero() {
     };
   }, []);
 
-  useControlledScroll(heroRef, setScrollProgress);
+  useEffect(() => {
+    let frame = 0;
+    let current = 0;
+    let target = 0;
+    let lastTime = 0;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const animate = (now: number) => {
+      const elapsed = Math.min(64, lastTime ? now - lastTime : 16);
+      lastTime = now;
+      current += (target - current) * (1 - Math.exp(-elapsed / 70));
+      if (Math.abs(target - current) < 0.0001) current = target;
+      setScrollProgress(current);
+      frame = current === target ? 0 : requestAnimationFrame(animate);
+    };
+    const measure = () => {
+      const hero = heroRef.current;
+      if (!hero) return;
+      const distance = Math.max(1, hero.offsetHeight - window.innerHeight);
+      target = Math.max(0, Math.min(1, -hero.getBoundingClientRect().top / distance));
+      if (reducedMotion) {
+        setScrollProgress(target);
+      } else if (!frame) {
+        lastTime = 0;
+        frame = requestAnimationFrame(animate);
+      }
+    };
+    measure();
+    window.addEventListener("scroll", measure, { passive: true });
+    window.addEventListener("resize", measure);
+    return () => {
+      window.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", measure);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -237,15 +270,14 @@ export default function ColorHero() {
   const sceneTop = (panelSize.height - sceneHeight) / 2;
   const frameOpacity = smoothstep(clamp01((phoneSettle - 0.72) / 0.28));
   const showModel = modelReady && entranceDone;
-  // These are different silhouettes, so any alpha blend draws two outlines.
-  // Switch at the aligned resting pose before the model starts its turn.
-  const modelVisible = showModel && scrollProgress >= 0.018;
-  const modelBlend = modelVisible ? 1 : 0;
-  const photoOpacity = modelVisible ? 0 : 1;
+  const modelBlend = showModel ? smoothstep(clamp01(scrollProgress / 0.012)) : 0;
+  const photoOpacity = showModel ? 1 - smoothstep(clamp01((scrollProgress - 0.012) / 0.008)) : 1;
   // The 3D rear remains the same object from the opening pose through the turn.
   const assetScale = Math.min(productSize.width / 1200, productSize.height / 1310);
   const artWidth = 1200 * assetScale;
   const artHeight = 1310 * assetScale;
+  // Match the resting 3D rear to the pair photograph, then release the offset before the turn.
+  const photoAlignment = 1 - smoothstep(clamp01((scrollProgress - 0.02) / 0.05));
   const endScale = panelSize.height * (mobile ? 0.37 : 0.66) / (artHeight * (1136 / 1310));
   const baseScale = mix(1, endScale, motion);
   const productScale = baseScale * mix(1, mobile ? 1.43 : 1.17, lensPhase);
@@ -376,7 +408,7 @@ export default function ColorHero() {
                   </div>
                 </div>
               ))}
-              <div className="three-phone-layer" style={{ opacity: modelBlend, width: "500%", height: "300%", left: "-200%", top: "-100%", transform: `translate3d(${-artWidth * 0.008}px, ${artHeight * 0.011}px, 0)` }}>
+              <div className="three-phone-layer" style={{ opacity: modelBlend, width: "500%", height: "300%", left: "-200%", top: "-100%", transform: `translate3d(${-artWidth * 0.008 * photoAlignment}px, ${artHeight * 0.018 * photoAlignment}px, 0)` }}>
                 <ThreePhone color={theme.name} turn={turn} lensPhase={lensPhase} shutterPhase={shutterPhase} apertureOpen={apertureOpen} scenePeek={scenePeek} lensTravel={lensTravel} sceneExpansion={sceneExpansion} compact={mobile} layoutReady={entranceDone} onReady={handleModelReady} />
               </div>
             </div>
@@ -421,7 +453,7 @@ export default function ColorHero() {
           <div className="skate-portal" style={{ left: sceneLeft, top: sceneTop, width: sceneWidth, height: sceneHeight, borderRadius: `${phoneSettle * 32}px`, opacity: sceneExpansion >= 1 ? 1 : 0, pointerEvents: depthReveal > 0.95 ? "auto" : "none" }} aria-hidden={sceneExpansion < 1}>
             <div className="skate-canvas" style={{ width: sceneWidth, height: sceneHeight, left: 0, top: 0 }}>
             <div className="skate-background">
-              <Image src="/assets/skate-city-v1.png" alt="" fill unoptimized loading="eager" sizes="100vw" style={{ objectFit: "cover", objectPosition: "center center" }} />
+              <Image src="/assets/skate-city-v1.png" alt="" fill unoptimized sizes="100vw" style={{ objectFit: "cover", objectPosition: "center center" }} />
             </div>
             <button
               ref={skaterRef}
@@ -464,8 +496,8 @@ export default function ColorHero() {
                 for (const key of ["--rider-angle", "--rider-tilt-y", "--rider-tilt-x", "--board-angle", "--board-tilt-x"]) element.style.setProperty(key, "0deg");
               }}
             >
-              <div className="skate-board-layer" style={{ marginTop: `${-depthReveal * 18}px` }}><Image src="/assets/skate-board-v1.png" alt="" unoptimized loading="eager" width={1536} height={1024} sizes="(max-width: 700px) 75vw, 34vw" /></div>
-              <div className="skate-rider-layer" style={{ marginTop: `${-depthReveal * 18}px` }}><Image src="/assets/skate-rider-v1.png" alt="" unoptimized loading="eager" width={1024} height={1536} sizes="(max-width: 700px) 90vw, 50vw" /></div>
+              <div className="skate-board-layer" style={{ marginTop: `${-depthReveal * 18}px` }}><Image src="/assets/skate-board-v1.png" alt="" unoptimized width={1536} height={1024} sizes="(max-width: 700px) 75vw, 34vw" /></div>
+              <div className="skate-rider-layer" style={{ marginTop: `${-depthReveal * 18}px` }}><Image src="/assets/skate-rider-v1.png" alt="" unoptimized width={1024} height={1536} sizes="(max-width: 700px) 90vw, 50vw" /></div>
             </button>
             <div className="skate-camera-ui" style={{ opacity: displayReveal * 0.84 }} aria-hidden="true">
               <span className="skate-camera-grid" />
