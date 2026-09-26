@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import ThreePhone from "./ThreePhone";
+import { useControlledScroll } from "./useControlledScroll";
 
 const colors = [
   { name: "Burgundy", image: "/assets/iphone-burgundy.png", outer: "#672738", stage: "#2c101c", glow: "#8e3951", ink: "#fff4f1", cameraStage: "#45202e", cameraPanel: "#171118", cameraAccent: "#dca8b9" },
@@ -81,48 +82,7 @@ export default function ColorHero() {
     };
   }, []);
 
-  useEffect(() => {
-    let frame = 0;
-    let current = 0;
-    let target = 0;
-    let lastTime = 0;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const animate = (now: number) => {
-      const elapsed = Math.min(64, lastTime ? now - lastTime : 16);
-      lastTime = now;
-      const gap = target - current;
-      // A gentle wheel movement gets enough frames to show the short optical
-      // beats. A deliberate long scroll raises the playback rate, while the
-      // per-frame cap still prevents jumping over the iris and lens entirely.
-      const intent = smoothstep(clamp01((Math.abs(gap) - 0.025) / 0.22));
-      const maxRate = mix(0.25, 0.85, intent) * elapsed / 1000;
-      const easedStep = Math.abs(gap) * (1 - Math.exp(-elapsed / 48));
-      current += Math.sign(gap) * Math.min(Math.abs(gap), easedStep, maxRate);
-      if (Math.abs(target - current) < 0.00025) current = target;
-      setScrollProgress(current);
-      frame = current === target ? 0 : requestAnimationFrame(animate);
-    };
-    const measure = () => {
-      const hero = heroRef.current;
-      if (!hero) return;
-      const distance = Math.max(1, hero.offsetHeight - window.innerHeight);
-      target = Math.max(0, Math.min(1, -hero.getBoundingClientRect().top / distance));
-      if (reducedMotion) {
-        setScrollProgress(target);
-      } else if (!frame) {
-        lastTime = 0;
-        frame = requestAnimationFrame(animate);
-      }
-    };
-    measure();
-    window.addEventListener("scroll", measure, { passive: true });
-    window.addEventListener("resize", measure);
-    return () => {
-      window.removeEventListener("scroll", measure);
-      window.removeEventListener("resize", measure);
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, []);
+  useControlledScroll(heroRef, setScrollProgress);
 
   useEffect(() => {
     setMounted(true);
@@ -463,7 +423,7 @@ export default function ColorHero() {
           <div className="skate-portal" style={{ left: sceneLeft, top: sceneTop, width: sceneWidth, height: sceneHeight, borderRadius: `${phoneSettle * 32}px`, opacity: sceneExpansion >= 1 ? 1 : 0, pointerEvents: depthReveal > 0.95 ? "auto" : "none" }} aria-hidden={sceneExpansion < 1}>
             <div className="skate-canvas" style={{ width: sceneWidth, height: sceneHeight, left: 0, top: 0 }}>
             <div className="skate-background">
-              <Image src="/assets/skate-city-v1.png" alt="" fill unoptimized sizes="100vw" style={{ objectFit: "cover", objectPosition: "center center" }} />
+              <Image src="/assets/skate-city-v1.png" alt="" fill unoptimized loading="eager" sizes="100vw" style={{ objectFit: "cover", objectPosition: "center center" }} />
             </div>
             <button
               ref={skaterRef}
@@ -506,8 +466,8 @@ export default function ColorHero() {
                 for (const key of ["--rider-angle", "--rider-tilt-y", "--rider-tilt-x", "--board-angle", "--board-tilt-x"]) element.style.setProperty(key, "0deg");
               }}
             >
-              <div className="skate-board-layer" style={{ marginTop: `${-depthReveal * 18}px` }}><Image src="/assets/skate-board-v1.png" alt="" unoptimized width={1536} height={1024} sizes="(max-width: 700px) 75vw, 34vw" /></div>
-              <div className="skate-rider-layer" style={{ marginTop: `${-depthReveal * 18}px` }}><Image src="/assets/skate-rider-v1.png" alt="" unoptimized width={1024} height={1536} sizes="(max-width: 700px) 90vw, 50vw" /></div>
+              <div className="skate-board-layer" style={{ marginTop: `${-depthReveal * 18}px` }}><Image src="/assets/skate-board-v1.png" alt="" unoptimized loading="eager" width={1536} height={1024} sizes="(max-width: 700px) 75vw, 34vw" /></div>
+              <div className="skate-rider-layer" style={{ marginTop: `${-depthReveal * 18}px` }}><Image src="/assets/skate-rider-v1.png" alt="" unoptimized loading="eager" width={1024} height={1536} sizes="(max-width: 700px) 90vw, 50vw" /></div>
             </button>
             <div className="skate-camera-ui" style={{ opacity: displayReveal * 0.84 }} aria-hidden="true">
               <span className="skate-camera-grid" />

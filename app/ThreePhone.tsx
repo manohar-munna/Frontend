@@ -3,9 +3,12 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
 import { createSkateOptics } from "./skate-optics";
+import { createPhoneReference, projectPhoneReference, type PhoneReference } from "./phone-reference";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
 type FinishName = "Burgundy" | "Pearl" | "Graphite" | "Sage" | "Midnight";
+// Geometry is registered to the product photograph. Painted camera details
+// are removed from the chassis and deck, so these offsets cannot expose copies.
 const CAMERA_SHIFT_X = 22;
 const CAMERA_SHIFT_Y = -14;
 type Finish = { rear: string; bounds: [number, number, number, number]; frame: string; camera: string; rearGrade: [number, number, number]; sideGrade: [number, number, number]; deckGrade: [number, number, number]; rearPivot: [number, number, number]; rearContrast: number; topGain: [number, number, number] };
@@ -17,6 +20,8 @@ const finishes: Record<FinishName, Finish> = {
   Sage: { rear: "/assets/iphone-rear-sage-v2.png", bounds: [207, 127, 818, 1406], frame: "#748677", camera: "#67796c", rearGrade: [0.76, 0.77, 0.82], sideGrade: [1.55, 1.46, 1.53], deckGrade: [1.08, 1.04, 1.05], rearPivot: [90, 100, 95], rearContrast: 1.60, topGain: [1.20, 1.22, 1.17] },
   Midnight: { rear: "/assets/iphone-rear-midnight-v2.png", bounds: [206, 128, 817, 1405], frame: "#304969", camera: "#283f60", rearGrade: [0.89, 1.05, 1.14], sideGrade: [1.64, 1.53, 1.67], deckGrade: [1.08, 0.97, 1.02], rearPivot: [31, 46, 72], rearContrast: 1.12, topGain: [1.18, 1.06, 1.06] },
 };
+
+const pairSources: Record<FinishName, string> = { Burgundy: "/assets/iphone-burgundy.png", Pearl: "/assets/iphone-pearl.png", Graphite: "/assets/iphone-pair.png", Sage: "/assets/iphone-sage.png", Midnight: "/assets/iphone-midnight.png" };
 
 const names = Object.keys(finishes) as FinishName[];
 const W = 540;
@@ -110,6 +115,7 @@ const photoFragment = `
   uniform vec2 uUvShiftFrom;
   uniform vec2 uUvShiftTo;
   uniform float uLogoPreserve;
+  uniform float uCleanCamera;
   uniform float uTinted;
   uniform float uBlend;
   varying vec2 vUv;
@@ -123,6 +129,27 @@ const photoFragment = `
     uv += uvShift * (1.0 - smoothstep(0.55, 1.0, logoRadius));
     if (uTinted > 0.5 && vX < -120.0) uv.y = mix(bounds.y, bounds.w, 0.53);
     vec3 color = texture2D(image, uv).rgb;
+    // The raised deck supplies the cameras. Remove the photograph's baked
+    // deck from the chassis underneath it so parallax cannot reveal duplicates.
+    if (uCleanCamera > 1.5) {
+      // A small clean patch of the original camera deck supplies its finish;
+      // lenses, flash and sensor are separate raised surfaces.
+      vec2 deckUv = vec2(mix(bounds.x, bounds.z, 0.515 + 0.025 * fract(vUv.x * 12.0)),
+        mix(bounds.y, bounds.w, 0.917 + 0.012 * fract(vUv.y * 18.0)));
+      color = texture2D(image, deckUv).rgb;
+      float deckHeight = clamp((vUv.y - 0.722) / 0.255, 0.0, 1.0);
+      color *= mix(0.80, 1.12, deckHeight);
+    } else if (uCleanCamera > 0.5) {
+      vec2 edgePoint = max(abs(vUv - 0.5) - vec2(0.34, 0.424), 0.0) / vec2(0.16, 0.076);
+      float paintedRim = smoothstep(0.72, 0.92, length(edgePoint));
+      vec2 insetUv = mix(vUv, vec2(0.5), vec2(0.10, 0.045));
+      vec2 rimUv = vec2(mix(bounds.x, bounds.z, insetUv.x), mix(bounds.y, bounds.w, insetUv.y));
+      color = mix(color, texture2D(image, rimUv).rgb, paintedRim);
+      float cameraArea = smoothstep(0.025, 0.055, vUv.x) * (1.0 - smoothstep(0.60, 0.65, vUv.x))
+        * smoothstep(0.69, 0.72, vUv.y) * (1.0 - smoothstep(0.975, 0.989, vUv.y));
+      vec2 cleanUv = vec2(mix(bounds.x, bounds.z, 0.72 + vUv.x * 0.20), uv.y);
+      color = mix(color, texture2D(image, cleanUv).rgb, cameraArea);
+    }
     if (uTinted > 0.5 && length(tint - vec3(1.0)) > 0.001) {
       float lightness = dot(color, vec3(0.2126, 0.7152, 0.0722));
       color = min(vec3(1.0), tint * clamp(lightness * 1.45 + 0.16, 0.1, 1.0));
@@ -152,7 +179,7 @@ const photoFragment = `
   }
 `;
 
-type Photos = { rear: Record<FinishName, THREE.Texture>; side: THREE.Texture; front: THREE.Texture };
+type Photos = { reference: Record<FinishName, THREE.Texture>; rear: Record<FinishName, THREE.Texture>; side: THREE.Texture; front: THREE.Texture };
 type PhotoKind = "rear" | "side" | "front";
 
 function makePhoto(kind: PhotoKind, photos: Photos, initial: FinishName, deck = false) {
@@ -180,6 +207,7 @@ function makePhoto(kind: PhotoKind, photos: Photos, initial: FinishName, deck = 
       uUvShiftFrom: { value: finishUvShift(initial, kind, deck) },
       uUvShiftTo: { value: finishUvShift(initial, kind, deck) },
       uLogoPreserve: { value: kind === "rear" && !deck ? 1 : 0 },
+      uCleanCamera: { value: kind === "rear" && !deck ? 1 : 0 },
       uTinted: { value: kind === "rear" ? 0 : 1 },
       uBlend: { value: 1 },
     },
@@ -565,6 +593,7 @@ type ModelState = {
   irisMotion: number;
   shutterRings: THREE.MeshPhysicalMaterial[];
   photos: Photos;
+  reference: PhoneReference;
   materials: { kind: PhotoKind; deck: boolean; material: THREE.ShaderMaterial }[];
   current: FinishName;
   animation: number;
@@ -576,6 +605,9 @@ type ModelState = {
 function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutterPhase: number, compact: boolean, apertureOpen = 0, scenePeek = 0, lensTravel = 0, sceneExpansion = 0) {
   // The photographic scene fully covers the 3D phone from this point on.
   if (sceneExpansion >= 1) return;
+  state.reference.uReferenceWeight.value = 1 - THREE.MathUtils.smoothstep(turn, 0, 0.06);
+  const referenceScale = 1 + 0.025 * state.reference.uReferenceWeight.value;
+  state.phone.scale.set(referenceScale, referenceScale, 1);
   // Turning the rear toward the left reveals the phone's left rail and makes
   // the outward-facing optical axis project to the right of the chassis.
   state.phone.rotation.y = THREE.MathUtils.degToRad(-34 * (1 - turn) + 27 * lensPhase * (1 - shutterPhase));
@@ -656,13 +688,13 @@ function setPhonePose(state: ModelState, turn: number, lensPhase: number, shutte
   }
   const detailReveal = THREE.MathUtils.smoothstep(shutterPhase, 0.08, 0.56);
   for (const material of state.detailMaterials) {
-    if (material instanceof THREE.MeshPhysicalMaterial || material instanceof THREE.MeshBasicMaterial) material.opacity = detailReveal;
+    if (material instanceof THREE.MeshPhysicalMaterial || material instanceof THREE.MeshBasicMaterial) material.opacity = material.userData.macroOnly ? detailReveal : 1;
   }
   // Preserve the simple dark housing and central optic as the camera moves
   // from the photographic phone surface into the modeled aperture.
-  state.opticalGlass.opacity = THREE.MathUtils.smoothstep(shutterPhase, 0.3, 0.82);
+  state.opticalGlass.opacity = 1;
   state.opticalGlass.userData.sceneReveal.value = scenePeek * (1 - sceneExpansion);
-  state.flashGlass.uniforms.uReveal.value = detailReveal;
+  state.flashGlass.uniforms.uReveal.value = 1;
   const closure = THREE.MathUtils.smoothstep(shutterPhase, 0.43, 0.76);
   const reopening = THREE.MathUtils.smoothstep(shutterPhase, 0.76, 1);
   state.irisAssembly.visible = closure > 0.001;
@@ -705,14 +737,14 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       onReady?.(false);
       return;
     }
-    // The camera deck fills the frame during the macro move, so retain
-    // subpixel coverage on the lens rims and polished chassis at that scale.
+    // Match the display's pixel density; MSAA handles edge coverage without
+    // multiplying fragment work by supersampling every 1x screen at 1.5–2x.
     const gl = renderer.getContext();
     const debugRenderer = gl.getExtension("WEBGL_debug_renderer_info");
     const rendererName = String(gl.getParameter(debugRenderer?.UNMASKED_RENDERER_WEBGL || gl.RENDERER));
     const softwareRenderer = /swiftshader|llvmpipe|software/i.test(rendererName);
     const integratedRenderer = /intel.*(uhd|iris|hd graphics)/i.test(rendererName);
-    const pixelRatio = softwareRenderer ? 1 : integratedRenderer ? 1.5 : Math.max(2, Math.min(devicePixelRatio || 1, 2.5));
+    const pixelRatio = softwareRenderer ? 1 : Math.min(devicePixelRatio || 1, integratedRenderer ? 1.5 : 2);
     renderer.setPixelRatio(pixelRatio);
     renderer.setClearColor(0, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -723,7 +755,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
     let renderFrame = 0;
     let state: ModelState | null = null;
     const loader = new THREE.TextureLoader();
-    const sources = [...names.map((name) => finishes[name].rear), "/assets/iphone-side-burgundy-v3.png", "/assets/iphone-front-burgundy-v3.png", "/assets/sensor-glass.webp", "/assets/iris-blade-cutout-v5.webp", "/assets/skate-city-v1.png", "/assets/skate-rider-v1.png", "/assets/skate-board-v1.png"];
+    const sources = [...names.map((name) => finishes[name].rear), "/assets/iphone-side-burgundy-v3.png", "/assets/iphone-front-burgundy-v3.png", "/assets/sensor-glass.webp", "/assets/iris-blade-cutout-v5.webp", "/assets/skate-city-v1.png", "/assets/skate-rider-v1.png", "/assets/skate-board-v1.png", ...names.map((name) => pairSources[name])];
 
     async function start() {
       const loaded = await Promise.all(sources.map((src) => loader.loadAsync(src)));
@@ -738,11 +770,11 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
         texture.magFilter = THREE.LinearFilter;
       });
       const rear = Object.fromEntries(names.map((name, index) => [name, loaded[index]])) as Photos["rear"];
-      const photos: Photos = { rear, side: loaded[5], front: loaded[6] };
+      const photos: Photos = { rear, side: loaded[5], front: loaded[6], reference: Object.fromEntries(names.map((name, index) => [name, loaded[12 + index]])) as Photos["reference"] };
       const initial = (latest.current.color in finishes ? latest.current.color : "Burgundy") as FinishName;
       const scene = new THREE.Scene();
-      // The iris alone reflects broad studio light panels. Keeping this map
-      // off the phone finish preserves the calibrated photographic transition.
+      // Studio panels light the optical hardware. The main painted finish
+      // uses the calibrated photographs independently of these reflections.
       const room = new RoomEnvironment();
       const pmrem = new THREE.PMREMGenerator(renderer);
       const environment = pmrem.fromScene(room, 0.04);
@@ -765,7 +797,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       phone.position.y = 15;
       scene.add(phone);
       const frame = new THREE.MeshPhysicalMaterial({ color: finishes[initial].frame, metalness: 0.66, roughness: 0.25, clearcoat: 0.7 });
-      const cameraMetal = new THREE.MeshPhysicalMaterial({ color: finishes[initial].camera, metalness: 0.52, roughness: 0.3, clearcoat: 0.7 });
+      const cameraMetal = new THREE.MeshPhysicalMaterial({ color: finishes[initial].camera, metalness: 0.52, roughness: 0.3, clearcoat: 0.7, envMap: environment.texture, envMapIntensity: 0.5 });
       const detailMaterials: THREE.Material[] = [];
       const detail = (color: THREE.ColorRepresentation, metalness: number, roughness: number) => {
         const material = new THREE.MeshPhysicalMaterial({ color, metalness, roughness, clearcoat: 0.75, transparent: true, opacity: 0, depthWrite: false });
@@ -779,7 +811,8 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
         return material;
       };
       const rearPhoto = photo("rear");
-      const deckPhoto = photo("rear", true);
+      const cleanDeckPhoto = photo("rear", true);
+      cleanDeckPhoto.uniforms.uCleanCamera.value = 2;
       const sidePhoto = photo("side");
       const frontPhoto = photo("front");
       const add = (geometry: THREE.BufferGeometry, material: THREE.Material | THREE.Material[], x = 0, y = 0, z = 0) => {
@@ -793,13 +826,24 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       // Its sides stay attached while the textured rear and front rotate.
       add(sideUvs(roundedPrism(W, H, D, R, 3)), [frame, sidePhoto]);
       add(faceUvs(new THREE.ShapeGeometry(roundedShape(W - 3, H - 3, R - 2), 24)), rearPhoto, 0, 0, D / 2 + 1.8);
-      // Keep the calibrated rear finish through the entire move. The deck and
-      // barrels have matching photo faces, then reveal finer macro detail.
+      // Keep the calibrated rear finish through the entire move. The camera
+      // deck and lenses are independent surfaces, with finer macro detail.
       const deckX = -100 + CAMERA_SHIFT_X;
       const deckY = 397 + CAMERA_SHIFT_Y;
+      const deckContact = new THREE.ShaderMaterial({
+        vertexShader: photoVertex,
+        fragmentShader: `void main() {
+          gl_FragColor = vec4(0.0, 0.0, 0.0, 0.22);
+          #include <colorspace_fragment>
+        }`,
+        transparent: true, depthWrite: false,
+      });
+      detailMaterials.push(deckContact);
+      add(new THREE.ShapeGeometry(roundedShape(290, 300, 56), 24), deckContact, deckX, deckY - 2, D / 2 + 2.1);
       add(roundedPrism(282, 292, 14, 53, 2), cameraMetal, deckX, deckY, D / 2 + 7);
-      add(faceUvs(new THREE.ShapeGeometry(roundedShape(279, 289, 51), 16), deckX, deckY), deckPhoto, deckX, deckY, D / 2 + 16.5);
+      add(faceUvs(new THREE.ShapeGeometry(roundedShape(279, 289, 51), 16), deckX, deckY), cleanDeckPhoto, deckX, deckY, D / 2 + 16.5);
       const deckFinish = detail(finishes[initial].camera, 0.46, 0.3);
+      deckFinish.userData.macroOnly = true;
       const grain = makeMicroGrain();
       deckFinish.bumpMap = grain;
       deckFinish.bumpScale = 0.42;
@@ -807,10 +851,22 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       add(new THREE.ShapeGeometry(roundedShape(276, 286, 50), 32), deckFinish, deckX, deckY, D / 2 + 16.85);
       const barrelBlack = detail(0x080a0d, 0.44, 0.24);
       const polishedEdge = detail(new THREE.Color(finishes[initial].frame).lerp(new THREE.Color(0x111316), 0.52), 0.78, 0.24);
+      polishedEdge.envMap = environment.texture;
+      polishedEdge.envMapIntensity = 0.45;
+      const lensContact = new THREE.ShaderMaterial({
+        vertexShader: photoVertex,
+        fragmentShader: `varying vec2 vUv; void main() {
+          float radius = length(vUv * 2.0 - 1.0);
+          gl_FragColor = vec4(0.0, 0.0, 0.0, 0.48 * (1.0 - smoothstep(0.82, 1.0, radius)));
+          #include <colorspace_fragment>
+        }`,
+        transparent: true, depthWrite: false,
+      });
+      detailMaterials.push(lensContact);
       const bladeTexture = loaded[8];
       const sensorTexture = loaded[7];
       const opticalGlass = makeOpticalGlass(sensorTexture);
-      const scenePhotos = loaded.slice(9);
+      const scenePhotos = loaded.slice(9, 12);
       const skate = createSkateOptics(scenePhotos.map((texture) => texture.image as HTMLImageElement), scenePhotos[0]);
       const sceneInLens = add(skate.geometry, skate.material, -170 + CAMERA_SHIFT_X, 465 + CAMERA_SHIFT_Y, D / 2 + 36.4);
       sceneInLens.renderOrder = 4;
@@ -833,9 +889,10 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       }
       opticUv.needsUpdate = true;
       for (const [index, [x, y]] of lenses.entries()) {
+        add(new THREE.CircleGeometry(68, 96), lensContact, x + 1, y - 2, D / 2 + 17.1);
         const barrel = add(new THREE.CylinderGeometry(60, 61, 15, 192), frame, x, y, D / 2 + 25);
         barrel.rotation.x = Math.PI / 2;
-        add(faceUvs(new THREE.CircleGeometry(58.5, 192), x, y), deckPhoto, x, y, D / 2 + 35);
+        add(new THREE.CircleGeometry(58.5, 192), barrelBlack, x, y, D / 2 + 35);
         add(new THREE.CircleGeometry(55, 256), barrelBlack, x, y, D / 2 + 35.6);
         add(new THREE.TorusGeometry(55.5, 2.5, 24, 256), polishedEdge, x, y, D / 2 + 36.4);
         if (index === 0) {
@@ -876,9 +933,9 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       addDeckDetail(new THREE.TorusGeometry(22, 2, 12, 96), flashRing, -35 + CAMERA_SHIFT_X, 491 + CAMERA_SHIFT_Y, D / 2 + 22.5);
       addDeckDetail(new THREE.CircleGeometry(20, 96), flashGlass, -35 + CAMERA_SHIFT_X, 491 + CAMERA_SHIFT_Y, D / 2 + 23);
       addDeckDetail(new THREE.TorusGeometry(22, 1.5, 12, 96), sensorRing, -36 + CAMERA_SHIFT_X, 292 + CAMERA_SHIFT_Y, D / 2 + 22.5);
-      addDeckDetail(new THREE.CircleGeometry(20, 96), barrelBlack, -36 + CAMERA_SHIFT_X, 292 + CAMERA_SHIFT_Y, D / 2 + 23);
+      addDeckDetail(new THREE.CircleGeometry(20, 96), innerHousing, -36 + CAMERA_SHIFT_X, 292 + CAMERA_SHIFT_Y, D / 2 + 23);
       addDeckDetail(new THREE.TorusGeometry(4.1, 0.8, 8, 48), microphoneRing, 7 + CAMERA_SHIFT_X, 319 + CAMERA_SHIFT_Y, D / 2 + 22.5);
-      addDeckDetail(new THREE.CircleGeometry(3.3, 48), barrelBlack, 7 + CAMERA_SHIFT_X, 319 + CAMERA_SHIFT_Y, D / 2 + 23);
+      addDeckDetail(new THREE.CircleGeometry(3.3, 48), innerHousing, 7 + CAMERA_SHIFT_X, 319 + CAMERA_SHIFT_Y, D / 2 + 23);
 
       // Six independent cutout leaves reveal the original recessed glass.
       // Each leaf keeps its own photo texture, 3D thickness, edge, and shadow.
@@ -987,6 +1044,9 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
       }
       add(roundedPrism(23, 64, 5, 10, 1.3), frame, -W / 2 - 3, 208, 0).rotation.y = -Math.PI / 2;
 
+      const reference = createPhoneReference(photos.reference[initial]);
+      projectPhoneReference(phone, reference, sceneInLens);
+
       const render = (immediate = false) => {
         if (cancelled) return;
         if (immediate) {
@@ -1002,12 +1062,15 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
         });
       };
       state = {
-        renderer, scene, environment, camera, phone, frame, cameraMetal, detailMaterials, opticalGlass, skate, scenePhotos, sensorTexture, flashGlass, grain, bladeTexture, irisAssembly, irisBlades, irisMotion: -1, shutterRings, photos, materials, current: initial, animation: 0, disposed: false, render,
+        renderer, scene, environment, camera, phone, frame, cameraMetal, detailMaterials, opticalGlass, skate, scenePhotos, sensorTexture, flashGlass, grain, bladeTexture, irisAssembly, irisBlades, irisMotion: -1, shutterRings, photos, reference, materials, current: initial, animation: 0, disposed: false, render,
         select(name) {
           if (name === this.current) return;
           if (this.animation) cancelAnimationFrame(this.animation);
           const from = this.current;
           this.current = name;
+          reference.uReferenceFrom.value = photos.reference[from];
+          reference.uReferenceTo.value = photos.reference[name];
+          reference.uReferenceBlend.value = 0;
           for (const { kind, deck, material } of this.materials) {
             const a = material.uniforms;
             a.uFrom.value = kind === "rear" ? photos.rear[from] : kind === "side" ? photos.side : photos.front;
@@ -1040,6 +1103,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
             const p = Math.min(1, (now - started) / 420);
             const eased = p * p * (3 - 2 * p);
             for (const { material } of this.materials) material.uniforms.uBlend.value = eased;
+            reference.uReferenceBlend.value = eased;
             frame.color.lerpColors(frameFrom, frameTo, eased);
             cameraMetal.color.lerpColors(deckFrom, deckTo, eased);
             polishedEdge.color.lerpColors(rimFrom, rimTo, eased);
@@ -1107,7 +1171,7 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
           blade.contactMaterial.dispose();
         }
         for (const ring of state.shutterRings) ring.dispose();
-        for (const texture of [...Object.values(state.photos.rear), state.photos.side, state.photos.front]) texture.dispose();
+        for (const texture of [...Object.values(state.photos.rear), ...Object.values(state.photos.reference), state.photos.side, state.photos.front]) texture.dispose();
       }
       stateRef.current = null;
       renderer.dispose();
