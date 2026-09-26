@@ -246,8 +246,6 @@ export default function ColorHero() {
   const assetScale = Math.min(productSize.width / 1200, productSize.height / 1310);
   const artWidth = 1200 * assetScale;
   const artHeight = 1310 * assetScale;
-  // Match the resting 3D rear to the pair photograph, then release the offset before the turn.
-  const photoAlignment = 1 - smoothstep(clamp01((scrollProgress - 0.02) / 0.05));
   const endScale = panelSize.height * (mobile ? 0.37 : 0.66) / (artHeight * (1136 / 1310));
   const baseScale = mix(1, endScale, motion);
   const productScale = baseScale * mix(1, mobile ? 1.43 : 1.17, lensPhase);
@@ -378,7 +376,7 @@ export default function ColorHero() {
                   </div>
                 </div>
               ))}
-              <div className="three-phone-layer" style={{ opacity: modelBlend, width: "500%", height: "300%", left: "-200%", top: "-100%", transform: `translate3d(${-artWidth * 0.008 * photoAlignment}px, ${artHeight * 0.011 * photoAlignment}px, 0)` }}>
+              <div className="three-phone-layer" style={{ opacity: modelBlend, width: "500%", height: "300%", left: "-200%", top: "-100%", transform: `translate3d(${-artWidth * 0.008}px, ${artHeight * 0.011}px, 0)` }}>
                 <ThreePhone color={theme.name} turn={turn} lensPhase={lensPhase} shutterPhase={shutterPhase} apertureOpen={apertureOpen} scenePeek={scenePeek} lensTravel={lensTravel} sceneExpansion={sceneExpansion} compact={mobile} layoutReady={entranceDone} onReady={handleModelReady} />
               </div>
             </div>
