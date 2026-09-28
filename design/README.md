@@ -1,20 +1,32 @@
-# Scroll presentation
+# Presentation notes
 
-The image in `scroll-final.png` is captured from the implemented desktop layout.
+## Scroll sequence
 
-The sequence follows progress through the pinned hero:
+The presentation follows progress through the pinned hero:
 
-- The five-card arch fades away first.
-- Both phones begin in the selected finish. The screen-facing phone uses the original pair artwork; the rear-facing phone is the 3D model from the opening pose onward.
-- The screen-facing phone moves left and fades behind the main phone. The model rotates continuously without a visible artwork swap.
-- The phone gradually moves to the right and rotates from a rear three-quarter view to an upright rear view. The metal side rail narrows as the back turns toward the viewer, with no sideways roll.
-- The backdrop, display frame, and left-hand copy appear during the move, retaining the selected color theme.
-- The final composition holds for the last portion of the scroll. Scrolling upward reverses the presentation.
+1. The five-card arch fades away. The rear phone is the native Three.js model from the opening pose onward; the screen-facing companion uses the original pair artwork.
+2. The companion moves left and fades behind the main phone. The same rear model moves right and rotates toward an upright rear view, with copy and a frame appearing around it.
+3. The phone moves left and tilts before the view approaches the main camera. Its six-blade iris remains visible around the small skateboard scene inside the lens.
+4. The view enters the iris. Spherical image distortion, glass shading, and glare fade progressively during the zoom, revealing the flat photo before the scene fills the frame.
+5. After a short full-frame beat, the photo settles into a portrait phone. A decorative camera interface, subtle island lens, and display details appear. Separate rider and board layers provide an interactive depth effect.
 
-On mobile, the copy sits above the display frame and the phone settles below it with a smaller rightward shift.
+Scrolling upward reverses the sequence. The selected finish also controls the presentation background. On smaller screens, copy and display details rearrange around the phone.
 
-The phone is one Three.js model in `app/ThreePhone.tsx`. Its rounded frame, rear and front, raised camera deck, three lens barrels, and side buttons are separate meshes. The approved 1024 × 1536 rear renders in `public/assets/iphone-rear-*-v2.png` are mapped onto the rear and camera surfaces. New matching side and front references cover the rail and display. One set of geometry serves all five colors; textures and metal finish interpolate when the selected color changes. The model turns 34 degrees around its vertical axis. The curtain waits until it is ready so the opening pose already uses this same model.
+## Phone continuity
 
-The flash and dark sensor use the calibrated camera photograph directly, with no duplicate disks over them. The lens faces sit clear of their barrels, and the camera uses a tight depth range to avoid surface flicker. `camera-detail.png` shows the final close-up. The card rail stays stable during scroll updates; only its fade changes, which keeps the scroll animation responsive.
+[ThreePhone.tsx](../app/ThreePhone.tsx) defines one reusable phone model for all five finishes. Its frame, rear and front surfaces, raised camera deck, lens barrels, and side controls use 3D geometry. Photographic textures supply surface detail, including the flash and sensor.
 
-The side and front reference PNGs were made with built-in image generation, conditioned on the approved Burgundy rear image. The prompts called for a straight orthographic burgundy volume-button side with a visible camera protrusion, and a matching straight-on front display with a continuous satin metal rim, black pill cutout, and burgundy silk wallpaper. Both were composed as full-height single phones with no labels or extra devices; the model crops to the phone surfaces.
+The opening rear phone and scrolling rear phone share geometry, textures, lighting, and placement. The original rear artwork is a fallback when WebGL is unavailable. The curtain waits for renderer readiness before revealing the opening pose.
+
+[skate-optics.ts](../app/skate-optics.ts) handles the scene's optical treatment inside the iris. [ColorHero.tsx](../app/ColorHero.tsx) coordinates the transition into the full-frame scene and final display.
+
+## Design captures
+
+These images record stages of the design and do not cover every frame of the current experience:
+
+- [Hero and 3D phone](hero-3d.png)
+- [Rear phone presentation](scroll-final.png)
+- [Camera close-up](camera-detail.png)
+- [Camera sequence reference](phase-two-camera-sequence.png)
+
+The original boards are in [design-concepts/](../design-concepts/).
