@@ -1,8 +1,10 @@
 import ColorHero from "./ColorHero";
+import SmoothScroll from "./SmoothScroll";
 
 export default function Home() {
   return (
     <main>
+      <SmoothScroll />
       <header className="site-header">
         <a className="brand" href="#top" aria-label="iPhone 18 Pro home">
           iPhone <span>18 Pro</span>

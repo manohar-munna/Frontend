@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import ThreePhone from "./ThreePhone";
 import FinishChapter from "./FinishChapter";
+import { subscribeScrollMotion } from "./scroll-motion";
 
 const colors = [
   { name: "Burgundy", image: "/assets/iphone-burgundy.png", outer: "#672738", stage: "#2c101c", glow: "#8e3951", ink: "#fff4f1", cameraStage: "#45202e", cameraPanel: "#171118", cameraAccent: "#dca8b9" },
@@ -83,38 +84,18 @@ export default function ColorHero() {
   }, []);
 
   useEffect(() => {
-    let frame = 0;
-    let current = 0;
-    let target = 0;
-    let lastTime = 0;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const animate = (now: number) => {
-      const elapsed = Math.min(64, lastTime ? now - lastTime : 16);
-      lastTime = now;
-      current += (target - current) * (1 - Math.exp(-elapsed / 70));
-      if (Math.abs(target - current) < 0.0001) current = target;
-      setScrollProgress(current);
-      frame = current === target ? 0 : requestAnimationFrame(animate);
-    };
     const measure = () => {
       const hero = heroRef.current;
       if (!hero) return;
       const distance = Math.max(1, hero.offsetHeight - window.innerHeight);
-      target = Math.max(0, Math.min(1, -hero.getBoundingClientRect().top / distance));
-      if (reducedMotion) {
-        setScrollProgress(target);
-      } else if (!frame) {
-        lastTime = 0;
-        frame = requestAnimationFrame(animate);
-      }
+      setScrollProgress(clamp01(-hero.getBoundingClientRect().top / distance));
     };
     measure();
-    window.addEventListener("scroll", measure, { passive: true });
+    const unsubscribe = subscribeScrollMotion(measure);
     window.addEventListener("resize", measure);
     return () => {
-      window.removeEventListener("scroll", measure);
+      unsubscribe();
       window.removeEventListener("resize", measure);
-      if (frame) cancelAnimationFrame(frame);
     };
   }, []);
 

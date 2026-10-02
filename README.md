@@ -33,6 +33,16 @@ npm run start
 
 Scrolling upward reverses the sequence. Autoplay pauses during the scroll presentation. The layout adapts to smaller screens and respects reduced-motion preferences. If WebGL is unavailable, the opening phone uses the original artwork.
 
+Wheel, trackpad, vertical touch gestures, and paging keys use one controlled page scroll. Fast input has a bounded travel queue and eases into a slower pace around the optical and finish transitions. Reversing direction immediately clears queued travel. Both chapters follow the actual page position; the phone canvas draws the same committed frame as the surrounding artwork. Scrollbar dragging, anchor links, browser zoom, nested scroll areas, and reduced-motion browsing retain native behavior.
+
+## Scroll regression checks
+
+```bash
+npm test
+```
+
+Checks cover input bursts, direction reversal, stalled frames, refresh-rate consistency, subpixel settling, and shared chapter synchronization. Run `npm run build` for the production and TypeScript checks.
+
 ## Project structure
 
 | Path | Purpose |
@@ -40,6 +50,8 @@ Scrolling upward reverses the sequence. Autoplay pauses during the scroll presen
 | [app/page.tsx](app/page.tsx) | Page entry point and header |
 | [app/ColorHero.tsx](app/ColorHero.tsx) | Entrance, carousel, scroll phases, and display interface |
 | [app/FinishChapter.tsx](app/FinishChapter.tsx) | Interactive finish showcase after the skateboard display |
+| [app/SmoothScroll.tsx](app/SmoothScroll.tsx) | Controlled page motion and native-input handoffs |
+| [app/scroll-motion.ts](app/scroll-motion.ts) | Shared scroll clock and bounded motion helpers |
 | [app/ThreePhone.tsx](app/ThreePhone.tsx) | Phone geometry, finish textures, lens, and WebGL rendering |
 | [app/skate-optics.ts](app/skate-optics.ts) | Lens distortion, glass, and photo transition |
 | [app/color-hero.css](app/color-hero.css) | Presentation styles and responsive layouts |

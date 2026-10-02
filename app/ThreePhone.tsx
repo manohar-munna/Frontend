@@ -1076,9 +1076,12 @@ export default function ThreePhone({ color, turn, lensPhase, shutterPhase, compa
     const state = stateRef.current;
     if (!state) return;
     setPhonePose(state, turn, lensPhase, shutterPhase, compact, apertureOpen, scenePeek, lensTravel, sceneExpansion);
+    // Draw the committed pose before paint so the canvas and DOM optics do
+    // not show different frames during a fast scroll or direction change.
+    if (!entranceActive && sceneExpansion < 1) state.render(true);
     if (layoutReady && !layoutReadyRef.current) state.render(true);
     layoutReadyRef.current = layoutReady;
-  }, [turn, lensPhase, shutterPhase, compact, apertureOpen, scenePeek, lensTravel, sceneExpansion, layoutReady]);
+  }, [turn, lensPhase, shutterPhase, compact, apertureOpen, scenePeek, lensTravel, sceneExpansion, layoutReady, entranceActive]);
 
   return <div ref={mountRef} className="three-phone" aria-hidden="true" />;
 }

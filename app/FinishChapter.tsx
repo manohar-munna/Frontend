@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { subscribeScrollMotion } from "./scroll-motion";
 
 type FinishOption = {
   readonly name: string;
@@ -53,6 +54,7 @@ export default function FinishChapter({ colors, active, outgoing, onSelect }: Fi
     let lastReducedMotion = reducedMotion.matches;
 
     const measure = () => {
+      if (frame) cancelAnimationFrame(frame);
       frame = 0;
       const bounds = section.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
@@ -106,12 +108,12 @@ export default function FinishChapter({ colors, active, outgoing, onSelect }: Fi
     };
 
     measure();
-    window.addEventListener("scroll", schedule, { passive: true });
+    const unsubscribe = subscribeScrollMotion(measure);
     window.addEventListener("resize", schedule);
     reducedMotion.addEventListener("change", schedule);
     compactLayout.addEventListener("change", schedule);
     return () => {
-      window.removeEventListener("scroll", schedule);
+      unsubscribe();
       window.removeEventListener("resize", schedule);
       reducedMotion.removeEventListener("change", schedule);
       compactLayout.removeEventListener("change", schedule);

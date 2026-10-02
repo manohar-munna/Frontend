@@ -19,7 +19,7 @@ Reviewed [Apple's iPhone 18 Pro presentation](https://www.apple.com/iphone-18-pr
 ## Motion and constraints
 
 - On desktop, the section holds a viewport-height stage while scroll position drives the reveal. On mobile, its content flows naturally and still responds to scroll position. The existing camera timing and phone continuity stay intact.
-- Use the supplied transparent pair assets. All scroll motion comes from a single scheduled animation-frame measurement and CSS transforms/opacity; there is no continuous idle animation loop or React state update per frame.
+- Use the supplied transparent pair assets. Both chapters share the actual controlled page scroll position. A bounded input queue and eased speed limits protect the short optical and finish beats during fast scrolling. Finish motion uses CSS transforms/opacity and avoids React state updates per frame; animation-frame work stops when the page settles.
 - On narrow screens, stack copy, product, and swatches; keep every finish available without horizontal page overflow.
 - Respect reduced-motion preference by showing the settled phone, headline, and controls immediately, with no fan spread, light sweep, or crossfade.
 - This is visual concept copy; make no new hardware claims.
