@@ -30,3 +30,5 @@ These images record stages of the design and do not cover every frame of the cur
 - [Camera sequence reference](phase-two-camera-sequence.png)
 
 The original boards are in [design-concepts/](../design-concepts/).
+
+The section after the skateboard display is planned and implemented in the [finish chapter storyboard](finish-chapter-storyboard.md).

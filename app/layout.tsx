@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./color-hero.css";
+import "./finish-chapter.css";
 
 export const metadata: Metadata = {
   title: "iPhone 18 Pro — The next perspective",

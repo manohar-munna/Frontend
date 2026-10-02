@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import ThreePhone from "./ThreePhone";
+import FinishChapter from "./FinishChapter";
 
 const colors = [
   { name: "Burgundy", image: "/assets/iphone-burgundy.png", outer: "#672738", stage: "#2c101c", glow: "#8e3951", ink: "#fff4f1", cameraStage: "#45202e", cameraPanel: "#171118", cameraAccent: "#dca8b9" },
@@ -229,6 +230,11 @@ export default function ColorHero() {
     setAutoplayEpoch((epoch) => epoch + 1);
     advance(distance);
   }, [advance]);
+
+  const selectFinish = useCallback((index: number) => {
+    const forward = (index - activeRef.current + COUNT) % COUNT;
+    selectCard(forward > COUNT / 2 ? forward - COUNT : forward);
+  }, [selectCard]);
 
   const normalize = useCallback(() => {
     const current = positionRef.current;
@@ -518,6 +524,7 @@ export default function ColorHero() {
         </div>
         </div>
       </section>
+      <FinishChapter colors={colors} active={active} outgoing={outgoing} onSelect={selectFinish} />
     </>
   );
 }
