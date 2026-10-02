@@ -66,15 +66,18 @@ export default function FinishChapter({ colors, active, outgoing, onSelect }: Fi
       const phone = smoothstep((progress - (compact ? 0.02 : 0.035)) / (compact ? 0.25 : 0.31));
       const copy = smoothstep((progress - (compact ? 0 : 0.12)) / (compact ? 0.2 : 0.32));
       const detail = compact
-        ? smoothstep((progress - 0.31) / 0.12) * (1 - smoothstep((progress - 0.66) / 0.12))
-        : smoothstep((progress - 0.39) / 0.15) * (1 - smoothstep((progress - 0.69) / 0.14));
-      const controls = smoothstep((progress - (compact ? 0.68 : 0.61)) / (compact ? 0.23 : 0.25));
+        ? smoothstep((progress - 0.28) / 0.1) * (1 - smoothstep((progress - 0.49) / 0.1))
+        : smoothstep((progress - 0.29) / 0.11) * (1 - smoothstep((progress - 0.49) / 0.1));
+      const spread = smoothstep((progress - 0.5) / 0.15) * (1 - smoothstep((progress - 0.76) / 0.14));
+      const light = smoothstep((progress - 0.25) / 0.08) * (1 - smoothstep((progress - 0.49) / 0.09));
+      const controls = smoothstep((progress - (compact ? 0.68 : 0.69)) / (compact ? 0.23 : 0.22));
       const ready = reducedMotion.matches || progress >= (compact ? 0.8 : 0.74);
 
       inner.style.setProperty("--finish-progress", progress.toFixed(4));
-      inner.style.setProperty("--finish-phone-opacity", (0.16 + phone * 0.84).toFixed(4));
-      inner.style.setProperty("--finish-phone-y", `${((1 - phone) * 108).toFixed(1)}px`);
-      inner.style.setProperty("--finish-phone-scale", (0.82 + phone * 0.18).toFixed(4));
+      inner.style.setProperty("--finish-phone-opacity", (0.35 + phone * 0.65).toFixed(4));
+      inner.style.setProperty("--finish-phone-x", `${((1 - phone) * (compact ? 24 : 70)).toFixed(1)}px`);
+      inner.style.setProperty("--finish-phone-y", `${((1 - phone) * 65 - detail * 12).toFixed(1)}px`);
+      inner.style.setProperty("--finish-phone-scale", (1 + (1 - phone) * (compact ? 0.14 : 0.32) + detail * 0.06 - spread * 0.18).toFixed(4));
       inner.style.setProperty("--finish-phone-turn", `${((1 - phone) * 5.5).toFixed(2)}deg`);
       inner.style.setProperty("--finish-copy-opacity", (compact ? 0.2 + copy * 0.8 : copy).toFixed(4));
       inner.style.setProperty("--finish-copy-y", `${((1 - copy) * (compact ? 24 : 48)).toFixed(1)}px`);
@@ -83,6 +86,15 @@ export default function FinishChapter({ colors, active, outgoing, onSelect }: Fi
       inner.style.setProperty("--finish-controls-opacity", controls.toFixed(4));
       inner.style.setProperty("--finish-controls-y", `${((1 - controls) * 28).toFixed(1)}px`);
       inner.style.setProperty("--finish-orbit-turn", `${(progress * 48).toFixed(2)}deg`);
+      inner.style.setProperty("--finish-spread", spread.toFixed(4));
+      inner.style.setProperty("--finish-light-opacity", (light * 0.22).toFixed(4));
+      inner.style.setProperty("--finish-light-x", `${(-75 + smoothstep((progress - 0.26) / 0.31) * 150).toFixed(2)}%`);
+      inner.style.setProperty("--finish-caption-opacity", Math.max(detail, spread).toFixed(4));
+      inner.dataset.beat = progress < 0.5 ? "light" : "color";
+      for (let index = 0; index < 3; index++) {
+        const line = smoothstep((progress - (compact ? 0 : 0.1) - index * 0.045) / 0.22);
+        inner.style.setProperty(`--finish-line-${index}`, line.toFixed(4));
+      }
 
       if (ready !== lastControlsReady) {
         lastControlsReady = ready;
@@ -112,6 +124,7 @@ export default function FinishChapter({ colors, active, outgoing, onSelect }: Fi
     "--finish-outer": selected.outer,
     "--finish-glow": selected.glow,
     "--finish-ink": selected.ink,
+    "--finish-artwork": `url("${selected.image}")`,
   } as CSSProperties;
 
   return (
@@ -122,7 +135,7 @@ export default function FinishChapter({ colors, active, outgoing, onSelect }: Fi
         <div className="finish-chapter-stage">
           <div className="finish-chapter-copy">
             <p className="finish-chapter-overline">DESIGNED TO FEEL PERSONAL</p>
-            <h2 id="finish-title">A finish for<br />every <em>point of view.</em></h2>
+            <h2 id="finish-title"><span className="finish-chapter-line"><span>A finish for</span></span><span className="finish-chapter-line"><span>every</span></span><span className="finish-chapter-line"><em>point of view.</em></span></h2>
             <p className="finish-chapter-description">The moment stays with you. Choose the color that makes it yours.</p>
             <div className="finish-chapter-selection" aria-live="polite" aria-atomic="true">
               <span className="finish-chapter-number">0{active + 1} <span>/ 0{colors.length}</span></span>
@@ -132,13 +145,23 @@ export default function FinishChapter({ colors, active, outgoing, onSelect }: Fi
           <div className="finish-chapter-visual" role="img" aria-label={`${selected.name} iPhone 18 Pro concept, rear and front views`}>
             <span className="finish-chapter-orbit" aria-hidden="true" />
             <span className="finish-chapter-monogram" aria-hidden="true">18</span>
+            <div className="finish-chapter-lineup" aria-hidden="true">
+              {colors.filter((_, index) => index !== active).map((color, index) => (
+                <div key={color.name} className="finish-chapter-lineup-phone" style={{ "--finish-slot": [-2, -1, 1, 2][index], zIndex: index === 0 || index === 3 ? 0 : 1 } as CSSProperties}>
+                  <Image src={color.image} alt="" fill sizes="(max-width: 700px) 55vw, 30vw" />
+                </div>
+              ))}
+            </div>
             <div className="finish-chapter-device">
               {outgoing !== null && outgoing !== active && (
                 <Image key={`out-${colors[outgoing].name}`} className="finish-chapter-phone is-outgoing" src={colors[outgoing].image} alt="" fill sizes="(max-width: 760px) 92vw, 48vw" />
               )}
               <Image key={selected.name} className="finish-chapter-phone is-current" src={selected.image} alt="" fill sizes="(max-width: 760px) 92vw, 48vw" />
+              <span className="finish-chapter-light" aria-hidden="true" />
+              <span key={`glint-${selected.name}`} className="finish-chapter-color-glint" aria-hidden="true" />
             </div>
-            <div className="finish-chapter-detail" aria-hidden="true"><span>01 / SURFACE STUDY</span><strong>Made for the light.</strong><small>Watch each finish change with the angle.</small></div>
+            <div className="finish-chapter-detail" aria-hidden="true"><span>01 / SURFACE STUDY</span><strong>Made for the light.</strong><small>Rich color. Fine detail.</small></div>
+            <div className="finish-chapter-beat" aria-hidden="true"><span className="is-light">01 — Into the light.</span><span className="is-color">02 — Five ways to make it yours.</span></div>
             <span className="finish-chapter-visual-label">iPHONE 18 PRO <span>•</span> {selected.name.toUpperCase()}</span>
           </div>
         </div>
@@ -146,7 +169,7 @@ export default function FinishChapter({ colors, active, outgoing, onSelect }: Fi
         <div className="finish-chapter-controls">
           <div className="finish-chapter-swatches" role="group" aria-label="Choose a phone finish" aria-hidden={!controlsReady}>
             {colors.map((color, index) => (
-              <button key={color.name} className={`finish-chapter-swatch ${index === active ? "is-selected" : ""}`} type="button" onClick={() => onSelect(index)} aria-label={`Choose ${color.name}`} aria-pressed={index === active} tabIndex={controlsReady ? 0 : -1}>
+              <button key={color.name} className={`finish-chapter-swatch ${index === active ? "is-selected" : ""}`} style={{ "--finish-swatch-index": index } as CSSProperties} type="button" onClick={() => onSelect(index)} aria-label={`Choose ${color.name}`} aria-pressed={index === active} tabIndex={controlsReady ? 0 : -1}>
                 <span className="finish-chapter-swatch-color" style={{ backgroundColor: color.outer }} />
                 <span className="finish-chapter-swatch-label"><small>0{index + 1}</small>{color.name}</span>
               </button>
