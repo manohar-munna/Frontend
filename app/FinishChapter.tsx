@@ -70,7 +70,7 @@ export default function FinishChapter({ colors, active, outgoing, onSelect }: Fi
       const detail = compact
         ? smoothstep((progress - 0.28) / 0.1) * (1 - smoothstep((progress - 0.49) / 0.1))
         : smoothstep((progress - 0.29) / 0.11) * (1 - smoothstep((progress - 0.49) / 0.1));
-      const spread = smoothstep((progress - 0.5) / 0.15) * (1 - smoothstep((progress - 0.76) / 0.14));
+      const spread = smoothstep((progress - 0.38) / 0.32) * (1 - smoothstep((progress - 0.84) / 0.16));
       const light = smoothstep((progress - 0.25) / 0.08) * (1 - smoothstep((progress - 0.49) / 0.09));
       const controls = smoothstep((progress - (compact ? 0.68 : 0.69)) / (compact ? 0.23 : 0.22));
       const ready = reducedMotion.matches || progress >= (compact ? 0.8 : 0.74);
@@ -91,8 +91,20 @@ export default function FinishChapter({ colors, active, outgoing, onSelect }: Fi
       inner.style.setProperty("--finish-spread", spread.toFixed(4));
       inner.style.setProperty("--finish-light-opacity", (light * 0.22).toFixed(4));
       inner.style.setProperty("--finish-light-x", `${(-75 + smoothstep((progress - 0.26) / 0.31) * 150).toFixed(2)}%`);
-      inner.style.setProperty("--finish-caption-opacity", Math.max(detail, spread).toFixed(4));
+      const spreadCaption = smoothstep((progress - 0.48) / 0.18) * (1 - smoothstep((progress - 0.77) / 0.14));
+      inner.style.setProperty("--finish-caption-opacity", Math.max(detail, spreadCaption).toFixed(4));
       inner.dataset.beat = progress < 0.5 ? "light" : "color";
+      // Move out from behind the selected phone before becoming visible.
+      // On exit, disappear while still separated, before folding back in.
+      for (let index = 0; index < 4; index++) {
+        const outer = index === 0 || index === 3;
+        const unfold = smoothstep((progress - 0.38 - (outer ? 0.045 : 0)) / 0.3);
+        const fold = smoothstep((progress - 0.84) / 0.16);
+        const appear = smoothstep((progress - 0.44 - (outer ? 0.045 : 0)) / 0.22);
+        const disappear = smoothstep((progress - (outer ? 0.74 : 0.76)) / 0.13);
+        inner.style.setProperty(`--finish-position-${index}`, (unfold * (1 - fold)).toFixed(4));
+        inner.style.setProperty(`--finish-visibility-${index}`, (appear * (1 - disappear)).toFixed(4));
+      }
       for (let index = 0; index < 3; index++) {
         const line = smoothstep((progress - (compact ? 0 : 0.1) - index * 0.045) / 0.22);
         inner.style.setProperty(`--finish-line-${index}`, line.toFixed(4));
@@ -149,8 +161,8 @@ export default function FinishChapter({ colors, active, outgoing, onSelect }: Fi
             <span className="finish-chapter-monogram" aria-hidden="true">18</span>
             <div className="finish-chapter-lineup" aria-hidden="true">
               {colors.filter((_, index) => index !== active).map((color, index) => (
-                <div key={color.name} className="finish-chapter-lineup-phone" style={{ "--finish-slot": [-2, -1, 1, 2][index], zIndex: index === 0 || index === 3 ? 0 : 1 } as CSSProperties}>
-                  <Image src={color.image} alt="" fill sizes="(max-width: 700px) 55vw, 30vw" />
+                <div key={color.name} className="finish-chapter-lineup-phone" style={{ "--finish-slot": [-2, -1, 1, 2][index], "--finish-position": `var(--finish-position-${index}, 0)`, "--finish-visibility": `var(--finish-visibility-${index}, 0)`, zIndex: index === 0 || index === 3 ? 0 : 1 } as CSSProperties}>
+                  <Image src={color.image} alt="" fill sizes="(max-width: 700px) 55vw, 30vw" onLoad={(event) => { event.currentTarget.parentElement!.dataset.loaded = "true"; }} />
                 </div>
               ))}
             </div>

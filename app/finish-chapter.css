@@ -42,11 +42,13 @@
 .finish-chapter-orbit { position: absolute; width: min(92%, 690px); aspect-ratio: 1; border: 1px solid color-mix(in srgb, currentColor 18%, transparent); border-radius: 50%; transform: rotate(calc(-18deg + var(--finish-orbit-turn))) scaleY(.86); opacity: var(--finish-phone-opacity); }
 .finish-chapter-orbit::after { content: ''; position: absolute; inset: 13%; border: 1px solid color-mix(in srgb, currentColor 10%, transparent); border-radius: 50%; }
 .finish-chapter-monogram { position: absolute; top: 4%; left: 0; font-size: clamp(190px, 24vw, 410px); line-height: 1; font-weight: 650; letter-spacing: -.16em; opacity: .055; user-select: none; }
-.finish-chapter-device { position: absolute; inset: 0; opacity: var(--finish-phone-opacity); transform: translate3d(var(--finish-phone-x), var(--finish-phone-y), 0) rotate(var(--finish-phone-turn)) scale(var(--finish-phone-scale)); transform-origin: 50% 55%; will-change: transform, opacity; }
+.finish-chapter-device { position: absolute; z-index: 1; inset: 0; opacity: var(--finish-phone-opacity); transform: translate3d(var(--finish-phone-x), var(--finish-phone-y), 0) rotate(var(--finish-phone-turn)) scale(var(--finish-phone-scale)); transform-origin: 50% 55%; will-change: transform, opacity; }
 .finish-chapter-phone { object-fit: contain; object-position: center; filter: drop-shadow(0 38px 40px rgba(0, 0, 0, .24)); }
-.finish-chapter-lineup { position: absolute; inset: 0; opacity: var(--finish-spread); pointer-events: none; }
-.finish-chapter-lineup-phone { position: absolute; inset: 0; transform: translate3d(calc(var(--finish-slot) * var(--finish-spread) * 22%), calc(var(--finish-spread) * 5%), 0) rotate(calc(var(--finish-slot) * var(--finish-spread) * 8deg)) scale(calc(.72 - var(--finish-spread) * .14)); }
-.finish-chapter-lineup-phone img { object-fit: contain; filter: drop-shadow(0 20px 18px rgba(0,0,0,.24)); }
+/* Keep the companions behind the selected pair even at full opacity. */
+.finish-chapter-lineup { position: absolute; z-index: 0; inset: 0; pointer-events: none; }
+.finish-chapter-lineup-phone { position: absolute; inset: 0; opacity: var(--finish-visibility); transform: translate3d(calc(var(--finish-slot) * var(--finish-position) * 22%), calc(var(--finish-position) * 5%), 0) rotate(calc(var(--finish-slot) * var(--finish-position) * 8deg)) scale(calc(.72 - var(--finish-position) * .14)); will-change: transform, opacity; }
+.finish-chapter-lineup-phone img { object-fit: contain; opacity: 0; transition: opacity .3s ease; filter: drop-shadow(0 20px 18px rgba(0,0,0,.24)); }
+.finish-chapter-lineup-phone[data-loaded="true"] img { opacity: 1; }
 .finish-chapter-light,.finish-chapter-color-glint { position: absolute; inset: 0; pointer-events: none; mask-image: var(--finish-artwork); mask-position: center; mask-size: contain; mask-repeat: no-repeat; }
 .finish-chapter-light { opacity: var(--finish-light-opacity); }
 .finish-chapter-light::after,.finish-chapter-color-glint::after { content: ''; position: absolute; inset: -40%; background: linear-gradient(115deg, transparent 38%, rgba(255,244,222,.15) 44%, rgba(255,255,255,.9) 49%, rgba(255,245,225,.18) 54%, transparent 62%); }
@@ -106,7 +108,7 @@
   .finish-chapter-detail small { font-size: 10px; }
   .finish-chapter-visual-label { bottom: 2%; right: 4%; font-size: 8px; }
   .finish-chapter-beat { top: 0; font-size: 9px; }
-  .finish-chapter-lineup-phone { transform: translate3d(calc(var(--finish-slot) * var(--finish-spread) * 14%), calc(var(--finish-spread) * 5%), 0) rotate(calc(var(--finish-slot) * var(--finish-spread) * 7deg)) scale(calc(.64 - var(--finish-spread) * .14)); }
+  .finish-chapter-lineup-phone { transform: translate3d(calc(var(--finish-slot) * var(--finish-position) * 14%), calc(var(--finish-position) * 5%), 0) rotate(calc(var(--finish-slot) * var(--finish-position) * 7deg)) scale(calc(.64 - var(--finish-position) * .14)); }
   .finish-chapter-cue { left: 23px; bottom: 32px; }
   .finish-chapter-controls { align-items: stretch; flex-direction: column; gap: 12px; }
   .finish-chapter-swatches { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 12px; }
