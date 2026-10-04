@@ -50,8 +50,12 @@
 /* Keep the companions behind the selected pair even at full opacity. */
 .finish-chapter-lineup { position: absolute; z-index: 0; inset: 0; pointer-events: none; }
 .finish-chapter-lineup-phone { position: absolute; inset: 0; opacity: var(--finish-visibility); transform: translate3d(calc(var(--finish-slot) * var(--finish-position) * 22%), calc(var(--finish-position) * 5%), 0) rotate(calc(var(--finish-slot) * var(--finish-position) * 8deg)) scale(calc(.72 - var(--finish-position) * .14)); will-change: transform, opacity; }
-.finish-chapter-lineup-phone img { object-fit: contain; opacity: 0; transition: opacity .3s ease; filter: drop-shadow(0 20px 18px rgba(0,0,0,.24)); }
-.finish-chapter-lineup-phone[data-loaded="true"] img { opacity: 1; }
+.finish-chapter-lineup-phone { filter: drop-shadow(0 20px 18px rgba(0,0,0,.24)); }
+.finish-rear-view { position: relative; aspect-ratio: var(--rear-aspect); overflow: hidden; border-radius: 14% / 7%; }
+.finish-chapter-lineup-phone > .finish-rear-view { position: absolute; top: 50%; left: 50%; height: 94%; transform: translate(-50%, -50%); }
+.finish-rear-view img { opacity: 0; transition: opacity .3s ease; }
+.finish-rear-view[data-loaded="true"] img { opacity: 1; }
+.finish-chapter-companion-name { position: absolute; top: 100%; left: 0; right: 0; text-align: center; font-size: 14px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
 .finish-chapter-light,.finish-chapter-color-glint { position: absolute; inset: 0; pointer-events: none; mask-image: var(--finish-artwork); mask-position: center; mask-size: contain; mask-repeat: no-repeat; }
 .finish-chapter-light { opacity: var(--finish-light-opacity); }
 .finish-chapter-light::after,.finish-chapter-color-glint::after { content: ''; position: absolute; inset: -40%; background: linear-gradient(115deg, transparent 38%, rgba(255,244,222,.15) 44%, rgba(255,255,255,.9) 49%, rgba(255,245,225,.18) 54%, transparent 62%); }

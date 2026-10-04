@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import FinishRearView from "./FinishRearView";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { subscribeScrollMotion } from "./scroll-motion";
 
@@ -166,7 +167,8 @@ export default function FinishChapter({ colors, active, outgoing, onSelect }: Fi
             <div className="finish-chapter-lineup" aria-hidden="true">
               {colors.filter((_, index) => index !== active).map((color, index) => (
                 <div key={color.name} className="finish-chapter-lineup-phone" style={{ "--finish-slot": [-2, -1, 1, 2][index], "--finish-position": `var(--finish-position-${index}, 0)`, "--finish-visibility": `var(--finish-visibility-${index}, 0)`, zIndex: index === 0 || index === 3 ? 0 : 1 } as CSSProperties}>
-                  <Image src={color.image} alt="" fill sizes="(max-width: 700px) 55vw, 30vw" onLoad={(event) => { event.currentTarget.parentElement!.dataset.loaded = "true"; }} />
+                  <FinishRearView name={color.name} />
+                  <span className="finish-chapter-companion-name">{color.name}</span>
                 </div>
               ))}
             </div>
