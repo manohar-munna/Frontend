@@ -29,7 +29,7 @@ npm run start
 3. **Camera close-up.** The view approaches the main lens and reveals a six-blade iris. The skateboard scene appears inside the opening with spherical distortion, glass detail, and glare across the lens layers.
 4. **Inside the photo.** As the view enters the iris, the distortion gradually relaxes into a flat image. The scene expands to fill the presentation frame for a short beat.
 5. **Display reveal.** The photo settles into a portrait phone with a subtle island camera, a decorative camera interface, and display details beside it on larger screens. Separate rider and board layers add an interactive depth effect.
-6. **Finish chapter.** The selected phone pulls back as the headline reveals line by line. A masked light sweep leads into a spread of all five finishes, which gathers back before the staggered swatches appear. Selecting a finish updates the color-matched studio and shares the selection with the opening carousel.
+6. **Finish chapter.** Moving studio light accompanies the headline and selected phone pair. A masked light sweep and a magnified surface study lead into four single rear views of the other finishes, with a staggered fan entrance. The companions fade before folding back, then a closing message settles beside the selected pair. Numbered swatches share the selection with the opening carousel; decoded artwork stays mounted for uninterrupted color crossfades.
 
 Scrolling upward reverses the sequence. Autoplay pauses during the scroll presentation. The layout adapts to smaller screens and respects reduced-motion preferences. If WebGL is unavailable, the opening phone uses the original artwork.
 
@@ -50,6 +50,8 @@ Checks cover input bursts, direction reversal, stalled frames, refresh-rate cons
 | [app/page.tsx](app/page.tsx) | Page entry point and header |
 | [app/ColorHero.tsx](app/ColorHero.tsx) | Entrance, carousel, scroll phases, and display interface |
 | [app/FinishChapter.tsx](app/FinishChapter.tsx) | Interactive finish showcase after the skateboard display |
+| [app/FinishRearView.tsx](app/FinishRearView.tsx) | Cropped rear artwork for finish companions and surface study |
+| [app/finish-chapter.css](app/finish-chapter.css) | Finish lighting, fan, surface detail, and closing reveal |
 | [app/SmoothScroll.tsx](app/SmoothScroll.tsx) | Controlled page motion and native-input handoffs |
 | [app/scroll-motion.ts](app/scroll-motion.ts) | Shared scroll clock and bounded motion helpers |
 | [app/ThreePhone.tsx](app/ThreePhone.tsx) | Phone geometry, finish textures, lens, and WebGL rendering |

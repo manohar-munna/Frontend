@@ -81,6 +81,7 @@ export default function FinishChapter({ colors, active, onSelect }: FinishChapte
       const spread = smoothstep((progress - 0.38) / 0.32) * (1 - smoothstep((progress - 0.84) / 0.16));
       const light = smoothstep((progress - 0.25) / 0.08) * (1 - smoothstep((progress - 0.49) / 0.09));
       const controls = smoothstep((progress - (compact ? 0.68 : 0.69)) / (compact ? 0.23 : 0.22));
+      const ending = smoothstep((progress - 0.88) / 0.12);
       const ready = reducedMotion.matches || progress >= (compact ? 0.8 : 0.74);
 
       inner.style.setProperty("--finish-progress", progress.toFixed(4));
@@ -95,6 +96,7 @@ export default function FinishChapter({ colors, active, onSelect }: FinishChapte
       inner.style.setProperty("--finish-detail-y", `${((1 - detail) * 22).toFixed(1)}px`);
       inner.style.setProperty("--finish-controls-opacity", controls.toFixed(4));
       inner.style.setProperty("--finish-controls-y", `${((1 - controls) * 28).toFixed(1)}px`);
+      inner.style.setProperty("--finish-ending", ending.toFixed(4));
       inner.style.setProperty("--finish-orbit-turn", `${(progress * 48).toFixed(2)}deg`);
       inner.style.setProperty("--finish-halo-x", `${((1 - phone) * 18 - spread * 8).toFixed(2)}%`);
       inner.style.setProperty("--finish-halo-scale", (0.8 + phone * 0.2 + spread * 0.2).toFixed(4));
@@ -160,7 +162,10 @@ export default function FinishChapter({ colors, active, onSelect }: FinishChapte
           <div className="finish-chapter-copy">
             <p className="finish-chapter-overline">DESIGNED TO FEEL PERSONAL</p>
             <h2 id="finish-title"><span className="finish-chapter-line"><span>A finish for</span></span><span className="finish-chapter-line"><span>every</span></span><span className="finish-chapter-line"><em>point of view.</em></span></h2>
-            <p className="finish-chapter-description">The moment stays with you. Choose the color that makes it yours.</p>
+            <div className="finish-chapter-message">
+              <p className="finish-chapter-description">The moment stays with you. Choose the color that makes it yours.</p>
+              <p className="finish-chapter-ending" aria-hidden="true"><span>Make the moment yours.</span><small>Five finishes. One point of view.</small></p>
+            </div>
             <div className="finish-chapter-selection" aria-live="polite" aria-atomic="true">
               <span className="finish-chapter-number">0{active + 1} <span>/ 0{colors.length}</span></span>
               <span key={selected.name} className="finish-chapter-selection-text"><strong>{selected.name}</strong><small>{finishNotes[selected.name]}</small></span>
