@@ -88,6 +88,8 @@ export default function FinishChapter({ colors, active, outgoing, onSelect }: Fi
       inner.style.setProperty("--finish-controls-opacity", controls.toFixed(4));
       inner.style.setProperty("--finish-controls-y", `${((1 - controls) * 28).toFixed(1)}px`);
       inner.style.setProperty("--finish-orbit-turn", `${(progress * 48).toFixed(2)}deg`);
+      inner.style.setProperty("--finish-halo-x", `${((1 - phone) * 18 - spread * 8).toFixed(2)}%`);
+      inner.style.setProperty("--finish-halo-scale", (0.8 + phone * 0.2 + spread * 0.2).toFixed(4));
       inner.style.setProperty("--finish-spread", spread.toFixed(4));
       inner.style.setProperty("--finish-light-opacity", (light * 0.22).toFixed(4));
       inner.style.setProperty("--finish-light-x", `${(-75 + smoothstep((progress - 0.26) / 0.31) * 150).toFixed(2)}%`);
@@ -157,6 +159,8 @@ export default function FinishChapter({ colors, active, outgoing, onSelect }: Fi
             </div>
           </div>
           <div className="finish-chapter-visual" role="img" aria-label={`${selected.name} iPhone 18 Pro concept, rear and front views`}>
+            <div className="finish-chapter-illumination" aria-hidden="true"><span /><span /></div>
+            <span className="finish-chapter-floor" aria-hidden="true" />
             <span className="finish-chapter-orbit" aria-hidden="true" />
             <span className="finish-chapter-monogram" aria-hidden="true">18</span>
             <div className="finish-chapter-lineup" aria-hidden="true">
