@@ -71,6 +71,9 @@
 .finish-chapter-detail span { font-size: 9px; font-weight: 700; letter-spacing: .18em; opacity: .7; }
 .finish-chapter-detail strong { font-family: Georgia, 'Times New Roman', serif; font-size: 23px; font-weight: 400; letter-spacing: -.035em; }
 .finish-chapter-detail small { font-size: 11px; line-height: 1.35; opacity: .73; }
+.finish-chapter-study-preview { position: relative; height: 120px; margin: -8px -10px 7px; overflow: hidden; border-radius: 7px; background: var(--finish-outer); isolation: isolate; }
+.finish-chapter-study-preview .finish-rear-view { position: absolute; width: 165%; top: -27%; left: -12%; border-radius: 0; transform: translate3d(calc(var(--finish-progress) * -40px), 0, 0) rotate(-8deg); }
+.finish-chapter-study-preview > span { position: absolute; inset: -30%; background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.22) 50%, transparent 65%); transform: translate3d(var(--finish-light-x), 0, 0); }
 .finish-chapter-visual-label { position: absolute; right: 1%; bottom: 1%; font-size: 10px; font-weight: 700; letter-spacing: .2em; opacity: var(--finish-controls-opacity); }
 .finish-chapter-visual-label span { margin: 0 7px; opacity: .5; }
 .finish-chapter-cue { position: absolute; left: clamp(28px, 6vw, 104px); bottom: clamp(46px, 4vw, 74px); font-size: 10px; font-weight: 700; letter-spacing: .2em; opacity: calc(1 - var(--finish-controls-opacity)); }
@@ -113,6 +116,7 @@
   .finish-chapter-detail { left: 6%; bottom: 6%; width: 55%; padding: 13px 14px; }
   .finish-chapter-detail strong { font-size: 18px; }
   .finish-chapter-detail small { font-size: 10px; }
+  .finish-chapter-study-preview { height: 82px; margin: -3px -4px 4px; }
   .finish-chapter-visual-label { bottom: 2%; right: 4%; font-size: 8px; }
   .finish-chapter-beat { top: 0; font-size: 9px; }
   .finish-chapter-lineup-phone { transform: translate3d(calc(var(--finish-slot) * var(--finish-position) * 14%), calc(var(--finish-position) * 5%), 0) rotate(calc(var(--finish-slot) * var(--finish-position) * 7deg)) scale(calc(.64 - var(--finish-position) * .14)); }

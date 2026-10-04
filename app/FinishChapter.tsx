@@ -180,7 +180,10 @@ export default function FinishChapter({ colors, active, outgoing, onSelect }: Fi
               <span className="finish-chapter-light" aria-hidden="true" />
               <span key={`glint-${selected.name}`} className="finish-chapter-color-glint" aria-hidden="true" />
             </div>
-            <div className="finish-chapter-detail" aria-hidden="true"><span>01 / SURFACE STUDY</span><strong>Made for the light.</strong><small>Rich color. Fine detail.</small></div>
+            <div className="finish-chapter-detail" aria-hidden="true">
+              <div className="finish-chapter-study-preview"><FinishRearView name={selected.name} /><span /></div>
+              <span>01 / SURFACE STUDY</span><strong>Made for the light.</strong><small>Rich color. Fine detail.</small>
+            </div>
             <div className="finish-chapter-beat" aria-hidden="true"><span className="is-light">01 — Into the light.</span><span className="is-color">02 — Five ways to make it yours.</span></div>
             <span className="finish-chapter-visual-label">iPHONE 18 PRO <span>•</span> {selected.name.toUpperCase()}</span>
           </div>
