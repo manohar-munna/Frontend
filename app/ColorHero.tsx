@@ -505,7 +505,7 @@ export default function ColorHero() {
         </div>
         </div>
       </section>
-      <FinishChapter colors={colors} active={active} outgoing={outgoing} onSelect={selectFinish} />
+      <FinishChapter colors={colors} active={active} onSelect={selectFinish} />
     </>
   );
 }

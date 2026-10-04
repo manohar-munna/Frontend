@@ -17,7 +17,6 @@ type FinishOption = {
 type FinishChapterProps = {
   colors: readonly FinishOption[];
   active: number;
-  outgoing: number | null;
   onSelect: (index: number) => void;
 };
 
@@ -35,11 +34,19 @@ const smoothstep = (value: number) => {
   return progress * progress * (3 - 2 * progress);
 };
 
-export default function FinishChapter({ colors, active, outgoing, onSelect }: FinishChapterProps) {
+export default function FinishChapter({ colors, active, onSelect }: FinishChapterProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
   const [controlsReady, setControlsReady] = useState(false);
+  const [decoded, setDecoded] = useState<readonly boolean[]>(() => colors.map(() => false));
+  const [displayed, setDisplayed] = useState(active);
   const selected = colors[active];
+
+  // Keep the previous artwork visible until the new one has decoded. Every
+  // finish stays mounted so quick selections crossfade from their current opacity.
+  useEffect(() => {
+    if (decoded[active]) setDisplayed(active);
+  }, [active, decoded]);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -141,7 +148,7 @@ export default function FinishChapter({ colors, active, outgoing, onSelect }: Fi
     "--finish-outer": selected.outer,
     "--finish-glow": selected.glow,
     "--finish-ink": selected.ink,
-    "--finish-artwork": `url("${selected.image}")`,
+    "--finish-artwork": `url("${colors[displayed].image}")`,
   } as CSSProperties;
 
   return (
@@ -156,7 +163,7 @@ export default function FinishChapter({ colors, active, outgoing, onSelect }: Fi
             <p className="finish-chapter-description">The moment stays with you. Choose the color that makes it yours.</p>
             <div className="finish-chapter-selection" aria-live="polite" aria-atomic="true">
               <span className="finish-chapter-number">0{active + 1} <span>/ 0{colors.length}</span></span>
-              <span className="finish-chapter-selection-text"><strong>{selected.name}</strong><small>{finishNotes[selected.name]}</small></span>
+              <span key={selected.name} className="finish-chapter-selection-text"><strong>{selected.name}</strong><small>{finishNotes[selected.name]}</small></span>
             </div>
           </div>
           <div className="finish-chapter-visual" role="img" aria-label={`${selected.name} iPhone 18 Pro concept, rear and front views`}>
@@ -173,12 +180,12 @@ export default function FinishChapter({ colors, active, outgoing, onSelect }: Fi
               ))}
             </div>
             <div className="finish-chapter-device">
-              {outgoing !== null && outgoing !== active && (
-                <Image key={`out-${colors[outgoing].name}`} className="finish-chapter-phone is-outgoing" src={colors[outgoing].image} alt="" fill sizes="(max-width: 760px) 92vw, 48vw" />
-              )}
-              <Image key={selected.name} className="finish-chapter-phone is-current" src={selected.image} alt="" fill sizes="(max-width: 760px) 92vw, 48vw" />
+              {colors.map((color, index) => (
+                <Image key={color.name} className="finish-chapter-phone" data-current={index === displayed} src={color.image} alt="" fill loading="eager" sizes="(max-width: 760px) 92vw, 48vw"
+                  onLoad={() => setDecoded((previous) => previous[index] ? previous : previous.map((ready, item) => item === index || ready))} />
+              ))}
               <span className="finish-chapter-light" aria-hidden="true" />
-              <span key={`glint-${selected.name}`} className="finish-chapter-color-glint" aria-hidden="true" />
+              <span key={`glint-${colors[displayed].name}`} className="finish-chapter-color-glint" aria-hidden="true" />
             </div>
             <div className="finish-chapter-detail" aria-hidden="true">
               <div className="finish-chapter-study-preview"><FinishRearView name={selected.name} /><span /></div>
